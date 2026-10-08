@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: tripo-daily
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/status

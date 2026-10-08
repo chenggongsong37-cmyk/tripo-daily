@@ -1,0 +1,4 @@
+[
+  {"name":"OpenAI News","url":"https://openai.com/news/rss.xml","type":"官方公告"},
+  {"name":"Google DeepMind","url":"https://deepmind.google/blog/rss.xml","type":"官方公告"}
+]
