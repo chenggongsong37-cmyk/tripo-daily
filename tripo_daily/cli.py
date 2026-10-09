@@ -20,9 +20,9 @@ def collect(sources, sample=False):
     for s in sources:
         try:
             if requests:
-                r=requests.get(s["url"], timeout=15, headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}); r.raise_for_status(); body=r.text
+                r=requests.get(s["url"], timeout=15, headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}); r.raise_for_status(); body=r.content
             else:
-                with urlopen(Request(s["url"], headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}), timeout=15) as resp: body=resp.read().decode("utf-8", "replace")
+                with urlopen(Request(s["url"], headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}), timeout=15) as resp: body=resp.read()
             all_items += parse_feed(body,s["name"],s.get("type","媒体报道")); ok+=1
         except Exception as e: failures.append(f"{s.get('name',s.get('url'))}: {type(e).__name__}")
     return all_items, failures, ok

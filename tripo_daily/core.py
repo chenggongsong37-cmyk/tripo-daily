@@ -1,6 +1,7 @@
 """Core data model, windowing, collection, filtering and report rendering."""
 from __future__ import annotations
 import hashlib, html, json, re, sqlite3
+from email.utils import parsedate_to_datetime
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -36,7 +37,11 @@ def parse_dt(value: str | None) -> datetime | None:
         v = value.strip().replace("Z", "+00:00")
         d = datetime.fromisoformat(v)
         return (d if d.tzinfo else d.replace(tzinfo=UTC)).astimezone(UTC)
-    except ValueError: return None
+    except ValueError:
+        try:
+            d = parsedate_to_datetime(value)
+            return (d if d.tzinfo else d.replace(tzinfo=UTC)).astimezone(UTC)
+        except (TypeError, ValueError, OverflowError): return None
 
 def window_for(day: str | datetime, tz=CN):
     if isinstance(day, str): day = datetime.fromisoformat(day).date()
@@ -72,7 +77,7 @@ class Store:
         self.db.execute("create table if not exists items(id text primary key, data text not null)"); self.db.commit()
     def put(self, item): self.db.execute("insert or ignore into items values (?,?)", (item.id, json.dumps(item.__dict__, default=lambda x:x.isoformat() if isinstance(x,datetime) else x, ensure_ascii=False))); self.db.commit()
 
-def parse_feed(xml: str, source: str, source_type="媒体报道"):
+def parse_feed(xml: str | bytes, source: str, source_type="媒体报道"):
     root=ET.fromstring(xml); items=[]
     for e in root.findall(".//item") + root.findall(".//{http://www.w3.org/2005/Atom}entry"):
         def val(*names):
@@ -102,4 +107,25 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
     return "\n".join(lines)
 
 def html_report(md):
-    return "<!doctype html><meta charset='utf-8'><style>body{font:16px system-ui;max-width:960px;margin:2em auto;line-height:1.6}a{color:#06c}</style>" + "<pre style='white-space:pre-wrap'>" + html.escape(md) + "</pre>"
+    lines=md.splitlines(); out=[]; in_list=False
+    def inline(text):
+        safe=html.escape(text)
+        return re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2" target="_blank" rel="noopener noreferrer">\1</a>', safe)
+    def close_list():
+        nonlocal in_list
+        if in_list: out.append("</ul>"); in_list=False
+    for line in lines:
+        if line.startswith("### "):
+            close_list(); out.append(f"<h3>{inline(line[4:])}</h3>")
+        elif line.startswith("## "):
+            close_list(); out.append(f"<h2>{inline(line[3:])}</h2>")
+        elif line.startswith("# "):
+            close_list(); out.append(f"<h1>{inline(line[2:])}</h1>")
+        elif line.startswith("- "):
+            if not in_list: out.append("<ul>"); in_list=True
+            out.append(f"<li>{inline(line[2:])}</li>")
+        else:
+            close_list()
+            if line.strip(): out.append(f"<p>{inline(line)}</p>")
+    close_list()
+    return "<article class='daily-report'>"+"\n".join(out)+"</article>"
