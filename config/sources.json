@@ -138,5 +138,33 @@
     "name": "Google News AI 3D 产品与融资",
     "url": "https://news.google.com/rss/search?q=%28%223D+generation+platform%22+OR+%223D+AI%22+OR+text-to-3D+OR+Hunyuan3D+OR+Meshy+OR+Hyper3D+OR+Thrixel%29&hl=en-US&gl=US&ceid=US%3Aen",
     "type": "媒体聚合（AI 3D 专项）"
+  },
+  {
+    "name": "OpenAlex AI 3D 与世界模型",
+    "url": "https://api.openalex.org/works?search=3D%20generation%20world%20model%20spatial%20intelligence&sort=publication_date:desc&per-page=30",
+    "type": "学术文献索引（公开 API）",
+    "adapter": "openalex"
+  },
+  {
+    "name": "Crossref AI 3D 正式论文",
+    "url": "https://api.crossref.org/works?query.bibliographic=3D%20generation%20world%20model%20spatial%20intelligence&sort=published&order=desc&rows=30",
+    "type": "正式论文元数据（公开 API）",
+    "adapter": "crossref"
+  },
+  {
+    "name": "美国 Federal Register AI 与芯片政策",
+    "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=30&order=newest&conditions%5Bterm%5D=artificial%20intelligence%20semiconductor%20export%20control",
+    "type": "美国监管原文（官方 API）",
+    "adapter": "federal_register"
+  },
+  {
+    "name": "Google News 中国 AI 公司出海",
+    "url": "https://news.google.com/rss/search?q=%28%28AI+OR+人工智能+OR+3D+OR+机器人+OR+芯片%29+AND+%28出海+OR+海外市场+OR+全球化+OR+海外业务%29%29&hl=zh-CN&gl=CN&ceid=CN%3Azh-Hans",
+    "type": "媒体聚合（中国公司出海）"
+  },
+  {
+    "name": "Google News AI VC 融资",
+    "url": "https://news.google.com/rss/search?q=%28%28AI+OR+%223D+generation%22+OR+robotics+OR+simulation%29+AND+%28funding+OR+%22venture+capital%22+OR+%22Series+A%22+OR+investment%29%29&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "媒体聚合（VC 融资）"
   }
 ]
