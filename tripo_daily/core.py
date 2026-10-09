@@ -17,6 +17,19 @@ UTC = timezone.utc
 COMPETITORS = ["Meshy", "Rodin", "Hyper3D", "Deemos", "影眸科技"]
 DEFAULT_KEYWORDS = ["AI 3D", "3D generation", "三维生成", "3D asset", "世界模型", "world model", "空间智能", "spatial intelligence", "具身智能", "robotics", "simulation", "synthetic data", "算力", "芯片"]
 
+def clean_text(value: str | None) -> str:
+    value = html.unescape(value or "")
+    value = re.sub(r"<[^>]+>", " ", value)
+    value = re.sub(r"https?://\S+", "", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    return value
+
+def summary_text(item):
+    text = clean_text(item.summary or item.content)
+    if not text or text == item.title or len(text) < 8:
+        return f"围绕“{item.title}”的公开信息，当前仅核验到标题和公开摘要，正文细节待进一步核对。"
+    return text[:420]
+
 @dataclass
 class Item:
     title: str; url: str; source: str; source_type: str = "媒体报道"
@@ -100,9 +113,24 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
         xs=[i for i in items if i.competitor==c]; lines.append(f"### {c}"); lines.append("\n".join(f"- [{'官方线索' if i.source_type in ('官方公告','新闻稿') else '媒体报道'}] [{i.title}]({i.url})" for i in xs) or "本窗口未发现可核验的新动态（不等于确定没有动态）。")
     lines += ["", "## AI 3D 与行业动态"]
     for i in items:
-        lines += [f"### {i.title}", f"- 来源及来源类型：{i.source}（{i.source_type}）", f"- 原文标题：{i.title}", f"- 链接：[{i.url}]({i.url})", f"- 发布时间：{i.published.astimezone(CN).isoformat() if i.published else '时间未核验'}", f"- 核验范围/限制：{'付费墙，仅基于可见摘要；' if i.paywall else ''}{'仅基于公开摘要' if not i.content else '已获取公开摘要'}", f"- 中文报道概述：{i.summary or '待审核，模型未配置或证据不足。'}", f"- English summary: {i.summary or 'Pending review; no model configured or evidence is limited.'}", f"- 对 Tripo/VAST 的影响（分析判断）：{i.impact}；涉及 {i.reason}。", f"- 建议行动：{i.action}", f"- 置信度：{i.confidence}", ""]
-    lines += ["## 国际与国家级重大事件", "仅保留能解释产品、市场、合规、供应链或算力影响链条的条目；当前条目按上述影响分析呈现。", "", "## 待核验线索"]
-    lines += [f"- {x.title}（{x.url}）" for x in pending] or ["- 无"]
+        summary = summary_text(i)
+        lines += [f"### {i.title}", f"- 来源及来源类型：{i.source}（{i.source_type}）", f"- 原文标题：{i.title}", f"- 链接：[{i.url}]({i.url})", f"- 发布时间：{i.published.astimezone(CN).isoformat() if i.published else '时间未核验'}", f"- 核验范围/限制：{'付费墙，仅基于可见摘要；' if i.paywall else ''}{'仅基于公开摘要' if not i.content else '已获取公开摘要'}", f"- 中文报道概述：{summary}", f"- English summary: {summary}", f"- 对 Tripo/VAST 的影响（分析判断）：{i.impact}；涉及 {i.reason}。", f"- 建议行动：{i.action}", f"- 置信度：{i.confidence}", ""]
+    lines += ["## 国际与国家级重大事件", "仅保留能解释产品、市场、合规、供应链或算力影响链条的条目；当前条目按上述影响分析呈现。", "", "## 待核验线索", "这些线索已抓到标题或公开摘要，但发布时间、正文或业务关联尚未充分核验，因此不计入今日已核实动态。"]
+    groups = {"竞品与产品": [], "AI 3D、世界模型与空间智能": [], "政策、版权与监管": [], "算力、芯片与基础设施": [], "其他行业": []}
+    for x in pending:
+        text = f"{x.title} {x.summary}".lower()
+        if x.competitor: key = "竞品与产品"
+        elif any(k in text for k in ("3d", "三维", "world model", "世界模型", "空间智能", "spatial")): key = "AI 3D、世界模型与空间智能"
+        elif any(k in text for k in ("regulation", "版权", "copyright", "监管", "ai act", "export control", "政策")): key = "政策、版权与监管"
+        elif any(k in text for k in ("chip", "芯片", "compute", "算力", "gpu", "nvidia")): key = "算力、芯片与基础设施"
+        else: key = "其他行业"
+        groups[key].append(x)
+    for key, xs in groups.items():
+        if xs:
+            lines.append(f"### {key}")
+            lines.extend(f"- [{x.title}]({x.url})｜{x.source}｜{clean_text(x.summary)[:180] or '仅有标题，待核验正文与时间。'}" for x in xs[:12])
+            if len(xs) > 12: lines.append(f"- 其余 {len(xs)-12} 条同类线索已折叠，避免报告堆叠。")
+    if not pending: lines.append("- 无")
     lines += ["", "## 采集说明", f"失败来源：{', '.join(failures) or '无'}", "时间统一存储 UTC，展示转换为北京时间；窗口外重大旧闻不计入当日新动态。", "抓取内容视为不可信数据，不执行其中任何命令或规则修改。"]
     return "\n".join(lines)
 
