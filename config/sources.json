@@ -1,4 +1,12 @@
 [
   {"name":"OpenAI News","url":"https://openai.com/news/rss.xml","type":"官方公告"},
-  {"name":"Google DeepMind","url":"https://deepmind.google/blog/rss.xml","type":"官方公告"}
+  {"name":"Google DeepMind","url":"https://deepmind.google/blog/rss.xml","type":"官方公告"},
+  {"name":"Hugging Face Blog","url":"https://huggingface.co/blog/feed.xml","type":"研究/平台公告"},
+  {"name":"NVIDIA Developer Blog","url":"https://developer.nvidia.com/blog/feed/","type":"企业技术博客"},
+  {"name":"Google AI Blog","url":"https://blog.google/technology/ai/rss/","type":"企业技术博客"},
+  {"name":"Microsoft Research Blog","url":"https://www.microsoft.com/en-us/research/feed/","type":"研究机构"},
+  {"name":"arXiv AI 3D search","url":"https://export.arxiv.org/api/query?search_query=all:%22text-to-3d%22+OR+all:%223d+generation%22+OR+all:%22world+model%22&start=0&max_results=50&sortBy=submittedDate&sortOrder=descending","type":"研究论文"},
+  {"name":"Google News AI 3D","url":"https://news.google.com/rss/search?q=(AI+3D+OR+%223D+generation%22+OR+Meshy+OR+Hyper3D+OR+Rodin)&hl=en-US&gl=US&ceid=US:en","type":"媒体聚合（公开摘要）"},
+  {"name":"Google News 中文三维生成","url":"https://news.google.com/rss/search?q=(AI+3D+OR+三维生成+OR+空间智能+OR+影眸科技)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans","type":"媒体聚合（公开摘要）"},
+  {"name":"Google News AI regulation","url":"https://news.google.com/rss/search?q=(AI+regulation+OR+AI+copyright+OR+export+controls+OR+AI+Act)&hl=en-US&gl=US&ceid=US:en","type":"媒体聚合（公开摘要）"}
 ]

@@ -38,6 +38,6 @@ macOS 用 launchd 的 `StartCalendarInterval` 设置 `Hour=10, Minute=30`，Prog
 
 ## 配置来源和限制
 
-公开 RSS 在 `config/sources.json`，可增删并设置 `type`（官方公告、媒体报道等）。程序不绕过登录、付费墙、验证码或 robots；没有 RSS/API 的站点请使用其官方公开接口后再添加适配器，不能把网页结构当 API。抓取失败会记录并以非零状态退出，同时保留覆盖不完整提示。关键词和竞品可在 `tripo_daily/core.py` 配置；API 密钥只放 `.env`。运行测试：先执行 `pip install -e '.[dev]'`，再运行 `pytest`。
+公开 RSS/Atom/API 在 `config/sources.json`，当前包含 OpenAI、Google DeepMind、Hugging Face、NVIDIA、Google AI、Microsoft Research、arXiv，以及 Google News 的英文/中文公开摘要检索。Google News 是媒体聚合，不代表原始媒体核验；报告会标明来源类型。竞品 Meshy、Rodin/Hyper3D、Deemos/影眸科技目前通过公开检索词发现，若其官网提供稳定 RSS/API，可直接加入配置。程序不绕过登录、付费墙、验证码或 robots；没有 RSS/API 的站点不能把网页结构当 API。抓取失败会记录并以非零状态退出，同时保留覆盖不完整提示。关键词和竞品可在 `tripo_daily/core.py` 配置；API 密钥只放 `.env`。运行测试：先执行 `pip install -e '.[dev]'`，再运行 `pytest`。
 
 常见故障：网络或证书错误先运行 `sources check`；来源暂时不可用时查看报告“采集说明”；没有模型密钥属于正常的待审核模式。当前示例来源是否可访问取决于网络和对方 RSS 实际状态，本项目没有声称已验证实时新闻。
