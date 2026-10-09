@@ -14,3 +14,10 @@ def test_china_global_and_vc_sections_require_business_context():
     assert outbound.section == "china_global"
     assert funding.section == "vc_funding"
     assert generic.section == "industry" and generic.relevance == 0
+
+def test_priority_media_bypasses_keyword_filter_but_keeps_window():
+    from tripo_daily.cli import select_items
+    s,e=window_for("2026-01-02")
+    item=Item("Unrelated daily headline","https://example.com/a","TechCrunch",published=s,section="priority_media",relevance=1,attribution="TechCrunch")
+    assert select_items([classify(item)],s,e)==[item]
+    assert item.section == "priority_media"

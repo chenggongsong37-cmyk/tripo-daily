@@ -207,10 +207,10 @@ def classify(item: Item, keywords=None, competitors=None):
         if any(alias.lower() in text for alias in aliases): item.competitor = c
     policy_relevant = bool(policy_hits and business_hits)
     business_context = bool(hits or business_hits or item.competitor)
-    if global_hits and business_context: item.section = "china_global"
-    if funding_hits and business_context: item.section = "vc_funding"
-    if item.competitor: item.section = "competitor"
-    item.relevance = min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0))
+    if global_hits and business_context and item.section != "priority_media": item.section = "china_global"
+    if funding_hits and business_context and item.section != "priority_media": item.section = "vc_funding"
+    if item.competitor and item.section != "priority_media": item.section = "competitor"
+    item.relevance = max(item.relevance, min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0)))
     reasons = hits[:4] + global_hits[:1] + funding_hits[:1] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
     item.reason = "；".join(reasons) or "未命中配置关键词"
     item.impact = "机会" if any(x in text for x in ("launch", "发布", "突破", "funding", "融资")) else ("风险" if any(x in text for x in ("ban", "control", "监管", "版权", "export")) else "待观察")
@@ -369,6 +369,15 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
     d=start.astimezone(CN); weekday="一二三四五六日"[d.weekday()]
     lines=[f"# {d.year}年{d.month}月{d.day}日 星期{weekday}｜Tripo AI 舆情与行业日报", "", f"覆盖窗口：{start.astimezone(CN):%Y-%m-%d %H:%M} ～ {end.astimezone(CN):%Y-%m-%d %H:%M}（北京时间）", f"生成时间：{datetime.now(UTC).astimezone(CN):%Y-%m-%d %H:%M}", f"采集状态：成功来源数 {status.get('ok',0)}，失败来源数 {status.get('failed',0)}，候选数 {status.get('candidates',0)}，入选数 {len(items)}" + ("；覆盖不完整" if failures else ""), "", "## 今日要点"]
     for i in items[:5]: lines.append(f"- [{i.title}]({i.url}) — {i.impact}：{i.reason}")
+    lines += ["", "## 重点关注媒体"]
+    priority_items = [i for i in items if i.section == "priority_media"]
+    if priority_items:
+        for source in dict.fromkeys(i.attribution or i.source for i in priority_items):
+            lines.append(f"### {source}")
+            source_items = [i for i in priority_items if (i.attribution or i.source) == source]
+            for i in source_items: lines.extend(report_item_lines(i, "####", start, end))
+    else:
+        lines.append("本窗口未发现这些重点媒体可核验的公开报道；付费媒体仅覆盖公开可见线索。")
     lines += ["", "## 竞品动态追踪"]
     for c in COMPETITORS:
         xs=[i for i in items if i.competitor==c]
@@ -394,7 +403,7 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
         for i in funding_items: lines.extend(report_item_lines(i, "###", start, end))
     else: lines.append("本窗口未发现可核验且与关注行业明确相关的 VC 融资新动态。")
     lines += ["", "## AI 3D 与行业动态"]
-    industry_items = [i for i in items if not i.competitor and i.section not in ("china_global", "vc_funding")]
+    industry_items = [i for i in items if not i.competitor and i.section not in ("china_global", "vc_funding", "priority_media")]
     if industry_items:
         for i in industry_items: lines.extend(report_item_lines(i, "###", start, end))
     else:

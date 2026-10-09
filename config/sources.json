@@ -160,5 +160,42 @@
     "name": "Google News AI VC 融资",
     "url": "https://news.google.com/rss/search?q=%28%28AI+OR+%223D+generation%22+OR+robotics+OR+simulation%29+AND+%28funding+OR+%22venture+capital%22+OR+%22Series+A%22+OR+investment%29%29&hl=en-US&gl=US&ceid=US%3Aen",
     "type": "媒体聚合（VC 融资）"
+  },
+  {
+    "name": "TechCrunch 当日全部报道",
+    "url": "https://news.google.com/rss/search?q=site%3Atechcrunch.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（Google News 公开聚合）",
+    "priority_media": "TechCrunch"
+  },
+  {
+    "name": "The Information 当日公开线索",
+    "url": "https://news.google.com/rss/search?q=site%3Atheinformation.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（付费媒体公开摘要）",
+    "priority_media": "The Information",
+    "paywall": true
+  },
+  {
+    "name": "Forbes 当日全部报道",
+    "url": "https://news.google.com/rss/search?q=site%3Aforbes.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（Google News 公开聚合）",
+    "priority_media": "Forbes"
+  },
+  {
+    "name": "Wired 当日全部报道",
+    "url": "https://news.google.com/rss/search?q=site%3Awired.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（Google News 公开聚合）",
+    "priority_media": "Wired"
+  },
+  {
+    "name": "The Verge 当日全部报道",
+    "url": "https://news.google.com/rss/search?q=site%3Atheverge.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（Google News 公开聚合）",
+    "priority_media": "The Verge"
+  },
+  {
+    "name": "MIT Technology Review 当日全部报道",
+    "url": "https://news.google.com/rss/search?q=site%3Atechnologyreview.com&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "重点媒体（Google News 公开聚合）",
+    "priority_media": "MIT Technology Review"
   }
 ]

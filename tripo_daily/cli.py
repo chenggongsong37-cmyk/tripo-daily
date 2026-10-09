@@ -59,8 +59,16 @@ def collect(sources, sample=False):
         else:
             with urlopen(Request(s["url"], headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}), timeout=12) as resp: body=resp.read()
         if s.get("adapter") in {"gdelt","semantic_scholar","openalex","crossref","federal_register"}:
-            return json_items(json.loads(body),s)
-        return parse_feed(body,s["name"],s.get("type","媒体报道"))
+            items = json_items(json.loads(body),s)
+        else:
+            items = parse_feed(body,s["name"],s.get("type","媒体报道"))
+        if s.get("priority_media"):
+            for item in items:
+                item.section = "priority_media"
+                item.relevance = 1.0
+                item.paywall = bool(s.get("paywall"))
+                item.attribution = s.get("priority_media")
+        return items
     # Sources are independent. Parallel collection keeps the Vercel refresh
     # within its function limit even as the public-source catalog grows.
     with ThreadPoolExecutor(max_workers=min(16, max(1, len(enabled)))) as pool:
@@ -72,8 +80,16 @@ def collect(sources, sample=False):
             except Exception as e:
                 failures.append(f"{s.get('name',s.get('url'))}: {type(e).__name__}")
     return all_items, failures, ok
+def select_items(candidates, start, end, limit=30):
+    priority=[]; seen=set()
+    for item in sorted(candidates, key=lambda x: x.published or datetime.min.replace(tzinfo=UTC), reverse=True):
+        if item.section == "priority_media" and in_window(item,start,end) and item.canonical_url not in seen:
+            priority.append(item); seen.add(item.canonical_url)
+    regular=dedupe([i for i in candidates if i.section != "priority_media" and (i.sample or (i.published is not None and i.relevance>0))])
+    return priority + [i for i in regular if i.sample or topic_has_window_article(i,start,end)][:limit]
+
 def run(day, sample=False, preview=False, db="data/tripo.db", sources=DEFAULT_SOURCES):
-    start,end=window_for(day); raw, failures, ok=collect(sources_config(sources),sample); candidates=[classify(i) for i in raw]; all_topics=dedupe([i for i in candidates if i.sample or (i.published is not None and i.relevance>0)]); chosen=[i for i in all_topics if i.sample or topic_has_window_article(i,start,end)][:30]; pending=dedupe([i for i in candidates if i.published is None and i.relevance>0])
+    start,end=window_for(day); raw, failures, ok=collect(sources_config(sources),sample); candidates=[classify(i) for i in raw]; chosen=select_items(candidates,start,end); pending=dedupe([i for i in candidates if i.published is None and i.relevance>0])
     if preview:
         for i in candidates: print(f"{'入选' if i in chosen else '待审核'} | {i.title} | {i.reason} | {i.url}")
         return 0

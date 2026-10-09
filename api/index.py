@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler
 from tripo_daily.web import PAGE
-from tripo_daily.cli import collect, sources_config, DEFAULT_SOURCES
+from tripo_daily.cli import collect, sources_config, DEFAULT_SOURCES, select_items
 from tripo_daily.core import CN, Item, parse_dt, classify, dedupe, in_window, render_report, window_for, html_report, export_xlsx, summary_text, translate_to_chinese, translate_to_english, topic_has_window_article
 from tripo_daily.storage import latest_report, save_report, send_feishu
 
@@ -22,8 +22,7 @@ def make_report(day=None):
     raw, failures, ok = collect(sources_config(DEFAULT_SOURCES))
     _latest_source_status = {"configured": ok + len(failures), "ok": ok, "failed": len(failures)}
     candidates = [classify(i) for i in raw]
-    all_topics = dedupe([i for i in candidates if i.published is not None and i.relevance > 0])
-    chosen = [i for i in all_topics if topic_has_window_article(i, start, end)][:30]
+    chosen = select_items(candidates, start, end)
     _latest_items = chosen
     pending = dedupe([i for i in candidates if i.published is None and i.relevance > 0])
     # Translation calls are independent. Warm their caches concurrently so a
@@ -37,7 +36,7 @@ def make_report(day=None):
     status={"configured":ok+len(failures),"ok":ok,"failed":len(failures),"candidates":len(candidates),"chosen":len(chosen)}
     md = render_report(day, start, end, chosen, status, failures, pending)
     _latest_html, _latest_day = html_report(md), day
-    serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
+    serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"attribution":i.attribution,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
     save_report(day,md,_latest_html,status,serialized)
     return _latest_html, failures, len(candidates), len(chosen)
 
