@@ -343,29 +343,35 @@ def export_xlsx(items: list[Item], day: str) -> bytes:
     from openpyxl.utils import get_column_letter
     from openpyxl.worksheet.table import Table, TableStyleInfo
 
-    wb = Workbook(); ws = wb.active; ws.title = "当日舆情"
+    wb = Workbook(); ws = wb.active
     headers = ["媒体名称", "渠道", "区域", "日期", "标题", "链接", "栏目", "主题", "关键内容", "关键词", "竞品", "声量", "独立来源", "影响方向", "影响分析", "建议行动", "置信度", "核验状态"]
-    ws.append(headers)
-    for i in items:
-        articles, source_count, _ = topic_stats(i)
-        urls = "\n".join(a["url"] for a in articles)
-        topic = i.competitor or ("政策与监管" if "政策影响链" in i.reason else "AI 3D 与行业")
-        verified = "仅基于公开摘要" if not i.content else "已获取公开摘要"
-        ws.append([i.source, i.source_type, "Global/按来源", i.published.astimezone(CN).date() if i.published else None, i.title, urls, "竞品动态" if i.competitor else "行业动态", topic, topic_digest(i), i.reason, i.competitor or "", len(articles), source_count, i.impact, f"分析判断：{i.impact}；涉及 {i.reason}", i.action, i.confidence, verified])
     dark = PatternFill("solid", fgColor="5B6573"); white = Font(color="FFFFFF", bold=True)
     thin = Side(style="thin", color="8A8A8A")
-    for cell in ws[1]: cell.fill=dark; cell.font=white; cell.alignment=Alignment(horizontal="center", vertical="center"); cell.border=Border(left=thin,right=thin,top=thin,bottom=thin)
-    for row in ws.iter_rows(min_row=2):
-        for cell in row: cell.alignment=Alignment(vertical="top", wrap_text=True); cell.border=Border(left=thin,right=thin,top=thin,bottom=thin)
-        row[0].fill=PatternFill("solid",fgColor="E2E3E5"); row[4].font=Font(bold=True)
     widths=[20,18,14,12,38,42,16,22,55,28,22,10,12,12,35,24,10,18]
-    for idx,width in enumerate(widths,1): ws.column_dimensions[get_column_letter(idx)].width=width
-    ws.row_dimensions[1].height=28
-    for idx in range(2,ws.max_row+1): ws.row_dimensions[idx].height=90
-    ws.freeze_panes="A2"; ws.auto_filter.ref=ws.dimensions
-    if ws.max_row >= 2:
-        table=Table(displayName="DailyIntelligence",ref=f"A1:R{ws.max_row}"); table.tableStyleInfo=TableStyleInfo(name="TableStyleMedium2",showRowStripes=True,showFirstColumn=False,showLastColumn=False); ws.add_table(table)
-    ws.sheet_view.showGridLines=False; ws.page_setup.orientation="landscape"; ws.page_setup.fitToWidth=1
+    def fill_sheet(ws, sheet_items, table_name):
+        ws.append(headers)
+        for i in sheet_items:
+            articles, source_count, _ = topic_stats(i)
+            urls = "\n".join(a["url"] for a in articles)
+            topic = (i.attribution or "重点媒体") if i.section == "priority_media" else i.competitor or ("政策与监管" if "政策影响链" in i.reason else "AI 3D 与行业")
+            verified = ("付费墙，仅基于可见摘要" if i.paywall else "仅基于公开摘要") if not i.content else "已获取公开摘要"
+            section = "重点媒体" if i.section == "priority_media" else ("竞品动态" if i.competitor else "行业动态")
+            ws.append([i.source, i.source_type, "Global/按来源", i.published.astimezone(CN).date() if i.published else None, i.title, urls, section, topic, topic_digest(i), i.reason, i.competitor or "", len(articles), source_count, i.impact, f"分析判断：{i.impact}；涉及 {i.reason}", i.action, i.confidence, verified])
+        for cell in ws[1]: cell.fill=dark; cell.font=white; cell.alignment=Alignment(horizontal="center", vertical="center"); cell.border=Border(left=thin,right=thin,top=thin,bottom=thin)
+        for row in ws.iter_rows(min_row=2):
+            for cell in row: cell.alignment=Alignment(vertical="top", wrap_text=True); cell.border=Border(left=thin,right=thin,top=thin,bottom=thin)
+            row[0].fill=PatternFill("solid",fgColor="E2E3E5"); row[4].font=Font(bold=True)
+        for idx,width in enumerate(widths,1): ws.column_dimensions[get_column_letter(idx)].width=width
+        ws.row_dimensions[1].height=28
+        for idx in range(2,ws.max_row+1): ws.row_dimensions[idx].height=90
+        ws.freeze_panes="A2"; ws.auto_filter.ref=ws.dimensions
+        if ws.max_row >= 2:
+            table=Table(displayName=table_name,ref=f"A1:R{ws.max_row}"); table.tableStyleInfo=TableStyleInfo(name="TableStyleMedium2",showRowStripes=True,showFirstColumn=False,showLastColumn=False); ws.add_table(table)
+        ws.sheet_view.showGridLines=False; ws.page_setup.orientation="landscape"; ws.page_setup.fitToWidth=1
+    industry = [i for i in items if i.section != "priority_media"]
+    priority = [i for i in items if i.section == "priority_media"]
+    ws.title = "表1-行业舆情"; fill_sheet(ws, industry, "IndustryIntelligence")
+    priority_ws = wb.create_sheet("表2-重点媒体"); fill_sheet(priority_ws, priority, "PriorityMedia")
     info=wb.create_sheet("说明"); info.append(["Tripo AI 舆情与行业日报", day]); info.append(["时效口径", "北京时间前一天 10:30 至当天 10:30"]); info.append(["声量口径", "本次采集范围内合并到同一话题的公开文章数量，不代表全网总量"]); info.column_dimensions["A"].width=22; info.column_dimensions["B"].width=80
     stream=BytesIO(); wb.save(stream); return stream.getvalue()
 

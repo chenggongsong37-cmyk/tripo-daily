@@ -30,3 +30,14 @@ def test_top_stories_exclude_unrelated_priority_media_and_rank_competitor_first(
     selected=select_top_stories([unrelated,industry,competitor])
     assert unrelated not in selected
     assert selected[0] is competitor
+
+def test_excel_export_separates_industry_and_priority_media():
+    from io import BytesIO
+    from openpyxl import load_workbook
+    now=datetime(2026,1,2,3,tzinfo=timezone.utc)
+    industry=classify(Item("Meshy launch", "https://x/industry", "Media", published=now))
+    priority=Item("Daily media story", "https://x/priority", "Forbes", published=now, section="priority_media", attribution="Forbes")
+    wb=load_workbook(BytesIO(export_xlsx([industry,priority],"2026-01-02")),read_only=True)
+    assert wb.sheetnames[:2] == ["表1-行业舆情", "表2-重点媒体"]
+    assert wb["表1-行业舆情"]["E2"].value == "Meshy launch"
+    assert wb["表2-重点媒体"]["E2"].value == "Daily media story"
