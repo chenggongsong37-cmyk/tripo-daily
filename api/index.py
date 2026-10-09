@@ -41,7 +41,11 @@ def make_report(day=None):
     before, rest = md.split(marker, 1)
     priority_body, after = rest.split(next_marker, 1)
     main_md = before + next_marker + after
-    priority_md = before + marker + priority_body
+    # The priority-media page is an exhaustive media monitor, so the general
+    # daily highlights block would be redundant there. Keep only report
+    # metadata plus the media section.
+    priority_header = before.split("## 今日要点", 1)[0]
+    priority_md = priority_header + marker + priority_body
     _latest_html, _latest_priority_html, _latest_day = html_report(main_md), html_report(priority_md), day
     serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"attribution":i.attribution,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
     save_report(day,md,_latest_html,status,serialized)
@@ -69,7 +73,8 @@ class handler(BaseHTTPRequestHandler):
                         globals()["_latest_items"]=restored
                         start,end=window_for(saved["report_date"]); status=saved.get("status",{}); full_md=render_report(saved["report_date"],start,end,restored,status)
                         before,rest=full_md.split("## 重点关注媒体",1); priority_body,after=rest.split("## 竞品动态追踪",1)
-                        globals()["_latest_html"]=html_report(before+"## 竞品动态追踪"+after); globals()["_latest_priority_html"]=html_report(before+"## 重点关注媒体"+priority_body)
+                        priority_header=before.split("## 今日要点",1)[0]
+                        globals()["_latest_html"]=html_report(before+"## 竞品动态追踪"+after); globals()["_latest_priority_html"]=html_report(priority_header+"## 重点关注媒体"+priority_body)
                 except Exception: saved=None
                 if saved: return self.send_body(json.dumps({"url":"/api/report","message":f"最新日报：{_latest_day}","sources":_latest_source_status},ensure_ascii=False),"application/json; charset=utf-8")
                 configured = len(sources_config(DEFAULT_SOURCES))
