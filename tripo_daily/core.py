@@ -23,6 +23,8 @@ COMPETITOR_ALIASES = {
     "阿里 Happy Horse": ("happy horse", "happyhorse"),
 }
 COMPETITORS = list(COMPETITOR_ALIASES)
+CHINA_GLOBAL_KEYWORDS = ["中国公司出海", "企业出海", "海外市场", "海外业务", "全球化", "国际化", "海外发行", "海外上线", "海外用户", "跨境业务", "global expansion", "international expansion", "overseas market", "global launch", "cross-border", "go global", "localization"]
+VC_FUNDING_KEYWORDS = ["融资", "新一轮融资", "种子轮", "天使轮", "pre-a", "a轮", "b轮", "c轮", "战略投资", "风险投资", "创投", "投资机构", "领投", "跟投", "估值", "funding", "fundraise", "fundraising", "venture capital", "seed round", "angel round", "series a", "series b", "series c", "strategic investment", "valuation"]
 DEFAULT_KEYWORDS = ["AI 3D", "3D generation", "三维生成", "3D asset", "世界模型", "world model", "空间智能", "spatial intelligence", "具身智能", "robotics", "simulation", "synthetic data", "算力", "芯片"]
 POLICY_KEYWORDS = [
     "出口管制", "出口限制", "实体清单", "贸易限制", "技术封锁", "关税", "制裁",
@@ -166,7 +168,7 @@ class Item:
     competitor: str | None = None; paywall: bool = False; sample: bool = False
     event_time: datetime | None = None; discovered: datetime = field(default_factory=lambda: datetime.now(UTC))
     verified: bool = True; attribution: str = ""; relevance: float = 0.0; reason: str = ""
-    impact: str = "待观察"; action: str = "持续跟踪"; confidence: str = "中"
+    impact: str = "待观察"; action: str = "持续跟踪"; confidence: str = "中"; section: str = "industry"
     related_articles: list[dict] = field(default_factory=list)
     @property
     def canonical_url(self):
@@ -198,12 +200,18 @@ def classify(item: Item, keywords=None, competitors=None):
     hits = [k for k in keywords if k.lower() in text]
     policy_hits = [k for k in POLICY_KEYWORDS if k.lower() in text]
     business_hits = [k for k in POLICY_BUSINESS_TERMS if k.lower() in text]
+    global_hits = [k for k in CHINA_GLOBAL_KEYWORDS if k.lower() in text]
+    funding_hits = [k for k in VC_FUNDING_KEYWORDS if k.lower() in text]
     for c in competitors:
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
     policy_relevant = bool(policy_hits and business_hits)
-    item.relevance = min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0))
-    reasons = hits[:4] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
+    business_context = bool(hits or business_hits or item.competitor)
+    if global_hits and business_context: item.section = "china_global"
+    if funding_hits and business_context: item.section = "vc_funding"
+    if item.competitor: item.section = "competitor"
+    item.relevance = min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0))
+    reasons = hits[:4] + global_hits[:1] + funding_hits[:1] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
     item.reason = "；".join(reasons) or "未命中配置关键词"
     item.impact = "机会" if any(x in text for x in ("launch", "发布", "突破", "funding", "融资")) else ("风险" if any(x in text for x in ("ban", "control", "监管", "版权", "export")) else "待观察")
     item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
@@ -375,18 +383,30 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
                 articles, source_count, _ = topic_stats(i)
                 links = "；".join(f"[{x['source']}]({x['url']})" for x in articles)
                 lines.append(f"- 待核验话题：{i.title}｜声量 {len(articles)} 篇｜独立来源 {source_count} 个｜{links}")
+    lines += ["", "## 中国公司出海"]
+    global_items = [i for i in items if not i.competitor and i.section == "china_global"]
+    if global_items:
+        for i in global_items: lines.extend(report_item_lines(i, "###", start, end))
+    else: lines.append("本窗口未发现与关注行业明确相关的中国公司出海新动态。")
+    lines += ["", "## VC 融资"]
+    funding_items = [i for i in items if not i.competitor and i.section == "vc_funding"]
+    if funding_items:
+        for i in funding_items: lines.extend(report_item_lines(i, "###", start, end))
+    else: lines.append("本窗口未发现可核验且与关注行业明确相关的 VC 融资新动态。")
     lines += ["", "## AI 3D 与行业动态"]
-    industry_items = [i for i in items if not i.competitor]
+    industry_items = [i for i in items if not i.competitor and i.section not in ("china_global", "vc_funding")]
     if industry_items:
         for i in industry_items: lines.extend(report_item_lines(i, "###", start, end))
     else:
         lines.append("本窗口未发现竞品栏目之外的可核验行业动态。")
     lines += ["## 国际与国家级重大事件", "仅保留能解释产品、市场、合规、供应链或算力影响链条的窗口内条目；窗口外旧消息不展示。", "", "## 待核验线索", "仅保留发布时间未能核验的线索；已确认属于窗口外的旧消息会被排除，不进入当前日报。"]
-    groups = {"竞品与产品": [], "AI 3D、世界模型与空间智能": [], "政策、版权与监管": [], "算力、芯片与基础设施": [], "其他行业": []}
+    groups = {"中国公司出海": [], "VC 融资": [], "竞品与产品": [], "AI 3D、世界模型与空间智能": [], "政策、版权与监管": [], "算力、芯片与基础设施": [], "其他行业": []}
     for x in pending:
         text = f"{x.title} {x.summary}".lower()
         if x.competitor: continue
-        if any(k in text for k in ("3d", "三维", "world model", "世界模型", "空间智能", "spatial")): key = "AI 3D、世界模型与空间智能"
+        if x.section == "china_global": key = "中国公司出海"
+        elif x.section == "vc_funding": key = "VC 融资"
+        elif any(k in text for k in ("3d", "三维", "world model", "世界模型", "空间智能", "spatial")): key = "AI 3D、世界模型与空间智能"
         elif any(k in text for k in ("regulation", "版权", "copyright", "监管", "ai act", "export control", "政策")): key = "政策、版权与监管"
         elif any(k in text for k in ("chip", "芯片", "compute", "算力", "gpu", "nvidia")): key = "算力、芯片与基础设施"
         else: key = "其他行业"

@@ -37,7 +37,7 @@ def make_report(day=None):
     status={"configured":ok+len(failures),"ok":ok,"failed":len(failures),"candidates":len(candidates),"chosen":len(chosen)}
     md = render_report(day, start, end, chosen, status, failures, pending)
     _latest_html, _latest_day = html_report(md), day
-    serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
+    serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
     save_report(day,md,_latest_html,status,serialized)
     return _latest_html, failures, len(candidates), len(chosen)
 
