@@ -11,12 +11,13 @@ from tripo_daily.core import CN, Item, parse_dt, classify, dedupe, in_window, re
 from tripo_daily.storage import latest_report, save_report, send_feishu
 
 _latest_html = ""
+_latest_priority_html = ""
 _latest_day = None
 _latest_source_status = {"configured": 0, "ok": 0, "failed": 0}
 _latest_items = []
 
 def make_report(day=None):
-    global _latest_html, _latest_day, _latest_source_status, _latest_items
+    global _latest_html, _latest_priority_html, _latest_day, _latest_source_status, _latest_items
     day = day or datetime.now(CN).date().isoformat()
     start, end = window_for(day)
     raw, failures, ok = collect(sources_config(DEFAULT_SOURCES))
@@ -35,7 +36,13 @@ def make_report(day=None):
         list(pool.map(pretranslate, chosen))
     status={"configured":ok+len(failures),"ok":ok,"failed":len(failures),"candidates":len(candidates),"chosen":len(chosen)}
     md = render_report(day, start, end, chosen, status, failures, pending)
-    _latest_html, _latest_day = html_report(md), day
+    marker = "## 重点关注媒体"
+    next_marker = "## 竞品动态追踪"
+    before, rest = md.split(marker, 1)
+    priority_body, after = rest.split(next_marker, 1)
+    main_md = before + next_marker + after
+    priority_md = before + marker + priority_body
+    _latest_html, _latest_priority_html, _latest_day = html_report(main_md), html_report(priority_md), day
     serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"attribution":i.attribution,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
     save_report(day,md,_latest_html,status,serialized)
     return _latest_html, failures, len(candidates), len(chosen)
@@ -48,24 +55,28 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         global _latest_html
         path = self.path.split("?", 1)[0]
-        if path == "/": return self.send_body(PAGE)
+        if path in ("/", "/priority"): return self.send_body(PAGE)
         if path == "/api/status":
             if not _latest_html:
                 try:
                     saved=latest_report()
                     if saved:
-                        globals()["_latest_html"]=saved["html"]; globals()["_latest_day"]=saved["report_date"]; globals()["_latest_source_status"]=saved.get("status",{})
+                        globals()["_latest_day"]=saved["report_date"]; globals()["_latest_source_status"]=saved.get("status",{})
                         restored=[]
                         for row in saved.get("items",[]):
                             data=dict(row); data["published"]=parse_dt(data.get("published")); data["related_articles"]=[{**a,"published":parse_dt(a.get("published"))} for a in data.get("related_articles",[])]
                             restored.append(Item(**{k:v for k,v in data.items() if k in Item.__dataclass_fields__}))
                         globals()["_latest_items"]=restored
+                        start,end=window_for(saved["report_date"]); status=saved.get("status",{}); full_md=render_report(saved["report_date"],start,end,restored,status)
+                        before,rest=full_md.split("## 重点关注媒体",1); priority_body,after=rest.split("## 竞品动态追踪",1)
+                        globals()["_latest_html"]=html_report(before+"## 竞品动态追踪"+after); globals()["_latest_priority_html"]=html_report(before+"## 重点关注媒体"+priority_body)
                 except Exception: saved=None
                 if saved: return self.send_body(json.dumps({"url":"/api/report","message":f"最新日报：{_latest_day}","sources":_latest_source_status},ensure_ascii=False),"application/json; charset=utf-8")
                 configured = len(sources_config(DEFAULT_SOURCES))
                 return self.send_body(json.dumps({"url":None,"message":"尚未生成日报，请点击刷新日报","sources":{"configured":configured,"ok":0,"failed":0}}, ensure_ascii=False), "application/json; charset=utf-8")
             return self.send_body(json.dumps({"url":"/api/report","message":f"最新日报：{_latest_day}","sources":_latest_source_status}, ensure_ascii=False), "application/json; charset=utf-8")
         if path == "/api/report": return self.send_body(_latest_html or "暂无日报")
+        if path == "/api/priority": return self.send_body(_latest_priority_html or "暂无重点媒体日报")
         if path == "/api/export.xlsx":
             if not _latest_html: return self.send_body("请先点击刷新日报，再导出 Excel", "text/plain; charset=utf-8", 409)
             body = export_xlsx(_latest_items, _latest_day)
