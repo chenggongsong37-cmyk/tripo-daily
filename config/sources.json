@@ -140,12 +140,6 @@
     "type": "媒体聚合（AI 3D 专项）"
   },
   {
-    "name": "OpenAlex AI 3D 与世界模型",
-    "url": "https://api.openalex.org/works?search=3D%20generation%20world%20model%20spatial%20intelligence&sort=publication_date:desc&per-page=30",
-    "type": "学术文献索引（公开 API）",
-    "adapter": "openalex"
-  },
-  {
     "name": "Crossref AI 3D 正式论文",
     "url": "https://api.crossref.org/works?query.bibliographic=3D%20generation%20world%20model%20spatial%20intelligence&sort=published&order=desc&rows=30",
     "type": "正式论文元数据（公开 API）",
