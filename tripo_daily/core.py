@@ -283,6 +283,34 @@ def topic_stats(item: Item):
         span = local[0].strftime("%m-%d %H:%M") if len(local) == 1 else f"{local[0]:%m-%d %H:%M} ～ {local[-1]:%m-%d %H:%M}"
     return articles, len(sources), span
 
+def select_top_stories(items: list[Item], limit: int = 5) -> list[Item]:
+    """Select editorial highlights with an explicit Tripo/VAST relevance gate."""
+    eligible = []
+    for item in items:
+        # Priority-media monitoring is deliberately broad, but unrelated
+        # headlines must not displace actual AI 3D intelligence in highlights.
+        if item.section == "priority_media" and item.reason == "未命中配置关键词" and not item.competitor:
+            continue
+        eligible.append(item)
+
+    def score(item: Item):
+        text = f"{item.title} {item.summary} {item.reason}".lower()
+        direct_3d = any(k.lower() in text for k in ("AI 3D", "3D generation", "三维生成", "3D asset", "世界模型", "world model", "空间智能", "spatial intelligence"))
+        policy_chain = "政策影响链" in item.reason
+        section_weight = {"competitor": 50, "china_global": 24, "vc_funding": 22, "industry": 12, "priority_media": 8}.get(item.section, 0)
+        published = item.published.timestamp() if item.published else 0
+        return (
+            (100 if item.competitor else 0)
+            + (55 if direct_3d else 0)
+            + (35 if policy_chain else 0)
+            + section_weight
+            + item.relevance * 30
+            + min(len(item.related_articles), 5) * 4
+            + (5 if item.confidence == "高" else 2 if item.confidence == "中" else 0),
+            published,
+        )
+    return sorted(eligible, key=score, reverse=True)[:limit]
+
 def topic_digest(item: Item) -> str:
     """One conservative digest for a merged topic, using only fetched text."""
     articles, source_count, _ = topic_stats(item)
@@ -368,7 +396,9 @@ def parse_feed(xml: str | bytes, source: str, source_type="媒体报道"):
 def render_report(day, start, end, items, status, failures=(), pending=()):
     d=start.astimezone(CN); weekday="一二三四五六日"[d.weekday()]
     lines=[f"# {d.year}年{d.month}月{d.day}日 星期{weekday}｜Tripo AI 舆情与行业日报", "", f"覆盖窗口：{start.astimezone(CN):%Y-%m-%d %H:%M} ～ {end.astimezone(CN):%Y-%m-%d %H:%M}（北京时间）", f"生成时间：{datetime.now(UTC).astimezone(CN):%Y-%m-%d %H:%M}", f"采集状态：成功来源数 {status.get('ok',0)}，失败来源数 {status.get('failed',0)}，候选数 {status.get('candidates',0)}，入选数 {len(items)}" + ("；覆盖不完整" if failures else ""), "", "## 今日要点"]
-    for i in items[:5]: lines.append(f"- [{i.title}]({i.url}) — {i.impact}：{i.reason}")
+    top_stories = select_top_stories(items)
+    for i in top_stories: lines.append(f"- [{i.title}]({i.url}) — {i.impact}：{i.reason}")
+    if not top_stories: lines.append("- 本窗口暂无与 Tripo/VAST 有明确关联的可核验要点。")
     lines += ["", "## 重点关注媒体"]
     priority_items = [i for i in items if i.section == "priority_media"]
     if priority_items:

@@ -21,3 +21,12 @@ def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     item=Item("Unrelated daily headline","https://example.com/a","TechCrunch",published=s,section="priority_media",relevance=1,attribution="TechCrunch")
     assert select_items([classify(item)],s,e)==[item]
     assert item.section == "priority_media"
+
+def test_top_stories_exclude_unrelated_priority_media_and_rank_competitor_first():
+    now=datetime(2026,1,2,3,tzinfo=timezone.utc)
+    unrelated=classify(Item("Celebrity movie review", "https://x/celebrity", "Forbes", published=now, section="priority_media", relevance=1))
+    industry=classify(Item("New world model research", "https://x/world", "Research", published=now))
+    competitor=classify(Item("Meshy launches 3D generation update", "https://x/meshy", "Media", published=now))
+    selected=select_top_stories([unrelated,industry,competitor])
+    assert unrelated not in selected
+    assert selected[0] is competitor
