@@ -3,7 +3,7 @@ name = "tripo-daily"
 version = "0.1.0"
 description = "Tripo AI / VAST industry intelligence daily report"
 requires-python = ">=3.11"
-dependencies = ["requests>=2.31", "python-dotenv>=1.0"]
+dependencies = ["requests>=2.31", "python-dotenv>=1.0", "openpyxl>=3.1"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

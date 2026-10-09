@@ -1,12 +1,142 @@
 [
-  {"name":"OpenAI News","url":"https://openai.com/news/rss.xml","type":"官方公告"},
-  {"name":"Google DeepMind","url":"https://deepmind.google/blog/rss.xml","type":"官方公告"},
-  {"name":"Hugging Face Blog","url":"https://huggingface.co/blog/feed.xml","type":"研究/平台公告"},
-  {"name":"NVIDIA Developer Blog","url":"https://developer.nvidia.com/blog/feed/","type":"企业技术博客"},
-  {"name":"Google AI Blog","url":"https://blog.google/technology/ai/rss/","type":"企业技术博客"},
-  {"name":"Microsoft Research Blog","url":"https://www.microsoft.com/en-us/research/feed/","type":"研究机构"},
-  {"name":"arXiv AI 3D search","url":"https://export.arxiv.org/api/query?search_query=all:%22text-to-3d%22+OR+all:%223d+generation%22+OR+all:%22world+model%22&start=0&max_results=50&sortBy=submittedDate&sortOrder=descending","type":"研究论文"},
-  {"name":"Google News AI 3D","url":"https://news.google.com/rss/search?q=(AI+3D+OR+%223D+generation%22+OR+Meshy+OR+Hyper3D+OR+Rodin)&hl=en-US&gl=US&ceid=US:en","type":"媒体聚合（公开摘要）"},
-  {"name":"Google News 中文三维生成","url":"https://news.google.com/rss/search?q=(AI+3D+OR+三维生成+OR+空间智能+OR+影眸科技)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans","type":"媒体聚合（公开摘要）"},
-  {"name":"Google News AI regulation","url":"https://news.google.com/rss/search?q=(AI+regulation+OR+AI+copyright+OR+export+controls+OR+AI+Act)&hl=en-US&gl=US&ceid=US:en","type":"媒体聚合（公开摘要）"}
+  {
+    "name": "OpenAI News",
+    "url": "https://openai.com/news/rss.xml",
+    "type": "官方公告"
+  },
+  {
+    "name": "Google DeepMind",
+    "url": "https://deepmind.google/blog/rss.xml",
+    "type": "官方公告"
+  },
+  {
+    "name": "Hugging Face Blog",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "type": "研究/平台公告"
+  },
+  {
+    "name": "NVIDIA Developer Blog",
+    "url": "https://developer.nvidia.com/blog/feed/",
+    "type": "企业技术博客"
+  },
+  {
+    "name": "Google AI Blog",
+    "url": "https://blog.google/technology/ai/rss/",
+    "type": "企业技术博客"
+  },
+  {
+    "name": "Microsoft Research Blog",
+    "url": "https://www.microsoft.com/en-us/research/feed/",
+    "type": "研究机构"
+  },
+  {
+    "name": "AWS Machine Learning Blog",
+    "url": "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "type": "企业技术博客"
+  },
+  {
+    "name": "Unity Blog",
+    "url": "https://blog.unity.com/feed",
+    "type": "3D 平台公告"
+  },
+  {
+    "name": "GitHub Hunyuan3D Releases",
+    "url": "https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/releases.atom",
+    "type": "竞品官方代码发布"
+  },
+  {
+    "name": "GitHub Hunyuan3D Studio Releases",
+    "url": "https://github.com/Tencent-Hunyuan/Hunyuan3D-2/releases.atom",
+    "type": "竞品官方代码发布"
+  },
+  {
+    "name": "arXiv AI 3D search",
+    "url": "https://export.arxiv.org/api/query?search_query=all:%22text-to-3d%22+OR+all:%223d+generation%22+OR+all:%22world+model%22&start=0&max_results=50&sortBy=submittedDate&sortOrder=descending",
+    "type": "研究论文"
+  },
+  {
+    "name": "Google News AI 3D 与竞品",
+    "url": "https://news.google.com/rss/search?q=(AI+3D+OR+%223D+generation%22+OR+Meshy+OR+Hyper3D+OR+Rodin+OR+Hunyuan3D+OR+%22Happy+Horse%22)&hl=en-US&gl=US&ceid=US:en",
+    "type": "媒体聚合（公开摘要）"
+  },
+  {
+    "name": "Google News 中文三维生成与竞品",
+    "url": "https://news.google.com/rss/search?q=(AI+3D+OR+三维生成+OR+空间智能+OR+影眸科技+OR+腾讯混元+OR+混元3D+OR+%22Happy+Horse%22)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "type": "媒体聚合（公开摘要）"
+  },
+  {
+    "name": "Google News AI regulation",
+    "url": "https://news.google.com/rss/search?q=(AI+regulation+OR+AI+copyright+OR+export+controls+OR+AI+Act)&hl=en-US&gl=US&ceid=US:en",
+    "type": "媒体聚合（公开摘要）"
+  },
+  {
+    "name": "Google News 中国 AI 政策",
+    "url": "https://news.google.com/rss/search?q=(人工智能+监管+OR+生成式人工智能+政策+OR+AI+版权+OR+芯片+出口管制)&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "type": "媒体聚合（公开摘要）"
+  },
+  {
+    "name": "Google News 具身智能与机器人",
+    "url": "https://news.google.com/rss/search?q=(embodied+AI+OR+robotics+simulation+OR+synthetic+data+OR+具身智能+OR+机器人仿真)&hl=en-US&gl=US&ceid=US:en",
+    "type": "媒体聚合（公开摘要）"
+  },
+  {
+    "name": "Google News 中美 AI 与芯片政策",
+    "url": "https://news.google.com/rss/search?q=((US+China+OR+China+US)+AND+(AI+OR+semiconductor+OR+GPU+OR+cloud)+AND+(export+control+OR+entity+list+OR+tariff+OR+investment+screening))&hl=en-US&gl=US&ceid=US:en",
+    "type": "媒体聚合（政策与贸易）"
+  },
+  {
+    "name": "Google News 中美科技政策中文",
+    "url": "https://news.google.com/rss/search?q=(中美+AND+(人工智能+OR+芯片+OR+算力+OR+半导体)+AND+(出口管制+OR+实体清单+OR+关税+OR+投资审查+OR+数据跨境))&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
+    "type": "媒体聚合（政策与贸易）"
+  },
+  {
+    "name": "Google News 全球 AI 合规政策",
+    "url": "https://news.google.com/rss/search?q=((AI+OR+generative+AI)+AND+(copyright+OR+training+data+OR+data+localization+OR+government+procurement+OR+antitrust))&hl=en-US&gl=US&ceid=US:en",
+    "type": "媒体聚合（监管与版权）"
+  },
+  {
+    "name": "爱范儿 官方 RSS",
+    "url": "https://www.ifanr.com/feed",
+    "type": "媒体官方 RSS"
+  },
+  {
+    "name": "量子位 官方 RSS",
+    "url": "https://www.qbitai.com/feed",
+    "type": "媒体官方 RSS"
+  },
+  {
+    "name": "极客公园 官方 RSS",
+    "url": "https://www.geekpark.net/rss",
+    "type": "媒体官方 RSS"
+  },
+  {
+    "name": "VR陀螺 官方 RSS",
+    "url": "https://www.vrtuoluo.cn/rss",
+    "type": "媒体官方 RSS"
+  },
+  {
+    "name": "人民网中文时政 官方 RSS",
+    "url": "http://www.people.com.cn/rss/politics.xml",
+    "type": "党媒央媒官方 RSS"
+  },
+  {
+    "name": "人民网英文综合 官方 RSS",
+    "url": "http://en.people.cn/rss/90882.xml",
+    "type": "党媒央媒官方 RSS"
+  },
+  {
+    "name": "人民网英文中国频道 官方 RSS",
+    "url": "http://en.people.cn/rss/90785.xml",
+    "type": "党媒央媒官方 RSS"
+  },
+  {
+    "name": "Global Times 官方 RSS",
+    "url": "https://www.globaltimes.cn/rss/outbrain.xml",
+    "type": "党媒央媒官方 RSS"
+  },
+  {
+    "name": "Google News AI 3D 产品与融资",
+    "url": "https://news.google.com/rss/search?q=%28%223D+generation+platform%22+OR+%223D+AI%22+OR+text-to-3D+OR+Hunyuan3D+OR+Meshy+OR+Hyper3D+OR+Thrixel%29&hl=en-US&gl=US&ceid=US%3Aen",
+    "type": "媒体聚合（AI 3D 专项）"
+  }
 ]

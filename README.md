@@ -38,6 +38,16 @@ macOS 用 launchd 的 `StartCalendarInterval` 设置 `Hour=10, Minute=30`，Prog
 
 ## 配置来源和限制
 
-公开 RSS/Atom/API 在 `config/sources.json`，当前包含 OpenAI、Google DeepMind、Hugging Face、NVIDIA、Google AI、Microsoft Research、arXiv，以及 Google News 的英文/中文公开摘要检索。Google News 是媒体聚合，不代表原始媒体核验；报告会标明来源类型。竞品 Meshy、Rodin/Hyper3D、Deemos/影眸科技目前通过公开检索词发现，若其官网提供稳定 RSS/API，可直接加入配置。程序不绕过登录、付费墙、验证码或 robots；没有 RSS/API 的站点不能把网页结构当 API。抓取失败会记录并以非零状态退出，同时保留覆盖不完整提示。关键词和竞品可在 `tripo_daily/core.py` 配置；API 密钥只放 `.env`。运行测试：先执行 `pip install -e '.[dev]'`，再运行 `pytest`。
+公开 RSS/Atom/API 在 `config/sources.json`，当前包含 28 个已实际检查可访问的来源：OpenAI、Google DeepMind、Hugging Face、NVIDIA、Google AI、Microsoft Research、AWS、Unity、腾讯混元 GitHub Releases、arXiv，爱范儿、量子位、极客公园、VR陀螺、人民网中英文频道、Global Times 官方 RSS，以及 Google News 的中英文行业、监管、中美 AI 与芯片政策主题检索。Google News 是媒体聚合，不代表原始媒体核验；报告会标明来源类型。当前竞品包括 Meshy、影眸科技/Deemos（平台 Hyper3D，产品 Rodin）、腾讯混元/Hunyuan3D、阿里 Happy Horse，主要通过公开检索词发现；若其官网提供稳定 RSS/API，可直接加入配置。程序不绕过登录、付费墙、验证码或 robots；没有 RSS/API 的站点不能把网页结构当 API。抓取失败会记录并以非零状态退出，同时保留覆盖不完整提示。关键词和竞品可在 `tripo_daily/core.py` 配置；API 密钥只放 `.env`。运行测试：先执行 `pip install -e '.[dev]'`，再运行 `pytest`。
 
 常见故障：网络或证书错误先运行 `sources check`；来源暂时不可用时查看报告“采集说明”；没有模型密钥属于正常的待审核模式。当前示例来源是否可访问取决于网络和对方 RSS 实际状态，本项目没有声称已验证实时新闻。
+
+## Supabase 历史存储与飞书每日推送
+
+1. 在 Supabase 新建免费项目，打开 SQL Editor，复制执行 `supabase/schema.sql`。
+2. 在 Project Settings → API 获取 Project URL 和 `service_role` key。`service_role` 只能配置在 Vercel 服务端，禁止放入网页或提交 Git。
+3. 在 Vercel 项目 Settings → Environment Variables 添加 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`。
+4. 在飞书群添加自定义机器人，把 Webhook 和签名密钥分别填入 Vercel 的 `FEISHU_WEBHOOK_URL`、`FEISHU_SIGNING_SECRET`。
+5. 在 Vercel 增加随机长字符串 `CRON_SECRET`，然后重新部署。
+
+`vercel.json` 已配置 `30 2 * * *`，即每天 UTC 02:30、北京时间 10:30 调用 `/api/cron/daily`。定时任务会生成日报、按日期写入 Supabase，并在配置飞书后推送群卡片。Supabase 未配置时网页仍可运行，但不会持久保存历史；飞书未配置时只保存日报，不发送消息。

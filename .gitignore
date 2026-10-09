@@ -5,3 +5,5 @@ data/*.db
 reports/*
 __pycache__/
 .pytest_cache/
+.vercel
+.env*
