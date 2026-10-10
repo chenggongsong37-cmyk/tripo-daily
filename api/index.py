@@ -89,8 +89,28 @@ class handler(BaseHTTPRequestHandler):
         if path == "/api/cron/daily":
             auth=self.headers.get("Authorization",""); secret=os.getenv("CRON_SECRET","")
             if secret and auth != f"Bearer {secret}": return self.send_body("Unauthorized","text/plain",401)
-            _,failures,candidates,chosen=make_report(); saved=latest_report(); sent=send_feishu(_latest_day,_latest_source_status,(saved or {}).get("items",[]))
+            try:
+                _,failures,candidates,chosen=make_report()
+            except Exception as exc:
+                return self.send_body(json.dumps({"ok":False,"stage":"report","error":type(exc).__name__},ensure_ascii=False),"application/json; charset=utf-8",500)
+            saved=latest_report()
+            try:
+                sent=send_feishu(_latest_day,_latest_source_status,(saved or {}).get("items",[]))
+            except Exception as exc:
+                return self.send_body(json.dumps({"ok":False,"stage":"feishu","day":_latest_day,"report_saved":True,"error":str(exc)},ensure_ascii=False),"application/json; charset=utf-8",502)
             return self.send_body(json.dumps({"ok":not failures,"day":_latest_day,"candidates":candidates,"chosen":chosen,"feishu_sent":sent},ensure_ascii=False),"application/json; charset=utf-8")
+        if path == "/api/cron/feishu":
+            auth=self.headers.get("Authorization",""); secret=os.getenv("CRON_SECRET","")
+            if secret and auth != f"Bearer {secret}": return self.send_body("Unauthorized","text/plain",401)
+            try:
+                saved=latest_report()
+                today=datetime.now(CN).date().isoformat()
+                if not saved or saved.get("report_date") != today:
+                    return self.send_body(json.dumps({"ok":False,"stage":"feishu","error":"今日的日报尚未生成"},ensure_ascii=False),"application/json; charset=utf-8",409)
+                sent=send_feishu(today,saved.get("status",{}),saved.get("items",[]))
+                return self.send_body(json.dumps({"ok":True,"day":today,"feishu_sent":sent},ensure_ascii=False),"application/json; charset=utf-8")
+            except Exception as exc:
+                return self.send_body(json.dumps({"ok":False,"stage":"feishu","error":str(exc)},ensure_ascii=False),"application/json; charset=utf-8",502)
         self.send_error(404)
     def do_POST(self):
         if self.path.split("?", 1)[0] != "/api/refresh": return self.send_error(404)

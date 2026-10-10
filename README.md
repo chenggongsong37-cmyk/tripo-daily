@@ -51,3 +51,5 @@ macOS 用 launchd 的 `StartCalendarInterval` 设置 `Hour=10, Minute=30`，Prog
 5. 在 Vercel 增加随机长字符串 `CRON_SECRET`，然后重新部署。
 
 `vercel.json` 已配置 `30 2 * * *`，即每天 UTC 02:30、北京时间 10:30 调用 `/api/cron/daily`。定时任务会生成日报、按日期写入 Supabase，并在配置飞书后推送群卡片。Supabase 未配置时网页仍可运行，但不会持久保存历史；飞书未配置时只保存日报，不发送消息。
+
+Vercel Hobby 的定时任务可能在设定小时内延迟执行，并非秒级准点。若日报已生成但飞书发送失败，可使用带 `Authorization: Bearer $CRON_SECRET` 的请求调用 `/api/cron/feishu` 单独重试；该接口只发送 Supabase 中当天的日报，不会重新采集，也不会发送旧日报。

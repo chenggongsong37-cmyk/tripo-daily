@@ -30,4 +30,15 @@ def send_feishu(day, status, items):
     secret=os.getenv("FEISHU_SIGNING_SECRET")
     if secret:
         timestamp=str(int(time.time())); string_to_sign=f"{timestamp}\n{secret}".encode(); sign=base64.b64encode(hmac.new(string_to_sign,digestmod=hashlib.sha256).digest()).decode(); content.update({"timestamp":timestamp,"sign":sign})
-    r=requests.post(webhook,json=content,timeout=10); r.raise_for_status(); return True
+    r=requests.post(webhook,json=content,timeout=8); r.raise_for_status()
+    try:
+        result=r.json()
+    except ValueError as exc:
+        raise RuntimeError("飞书返回了无法解析的响应") from exc
+    # Custom bot responses use either `code` or the legacy `StatusCode`.
+    # HTTP 200 alone does not mean that Feishu accepted the message.
+    code=result.get("code", result.get("StatusCode", 0))
+    if code not in (0, "0", None):
+        message=result.get("msg") or result.get("StatusMessage") or "未知错误"
+        raise RuntimeError(f"飞书拒绝消息（{code}）：{message}")
+    return True

@@ -50,14 +50,14 @@ def collect(sources, sample=False):
             # Public APIs occasionally throttle or return a transient 5xx.
             # Retry only those recoverable responses so a brief provider-side
             # fluctuation does not mark the whole daily report incomplete.
-            for attempt in range(3):
-                r=requests.get(s["url"], timeout=14, headers=headers)
-                if r.status_code not in {429, 500, 502, 503, 504} or attempt == 2:
+            for attempt in range(2):
+                r=requests.get(s["url"], timeout=9, headers=headers)
+                if r.status_code not in {429, 500, 502, 503, 504} or attempt == 1:
                     break
                 sleep(1.5 * (attempt + 1))
             r.raise_for_status(); body=r.content
         else:
-            with urlopen(Request(s["url"], headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}), timeout=12) as resp: body=resp.read()
+            with urlopen(Request(s["url"], headers={"User-Agent":os.getenv("USER_AGENT","tripo-daily/0.1")}), timeout=9) as resp: body=resp.read()
         if s.get("adapter") in {"gdelt","semantic_scholar","openalex","crossref","federal_register"}:
             items = json_items(json.loads(body),s)
         else:
