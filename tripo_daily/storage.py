@@ -14,12 +14,12 @@ def save_report(day, markdown, html, status, items):
     if not configured(): return False
     payload={"report_date":str(day),"markdown":markdown,"html":html,"status":status,"items":items,"generated_at":datetime.utcnow().isoformat()+"Z"}
     url=os.environ["SUPABASE_URL"].rstrip("/")+"/rest/v1/daily_reports?on_conflict=report_date"
-    r=requests.post(url,headers=_headers("resolution=merge-duplicates,return=minimal"),data=json.dumps(payload,ensure_ascii=False),timeout=15); r.raise_for_status(); return True
+    r=requests.post(url,headers=_headers("resolution=merge-duplicates,return=minimal"),data=json.dumps(payload,ensure_ascii=False),timeout=8); r.raise_for_status(); return True
 
 def latest_report():
     if not configured(): return None
     url=os.environ["SUPABASE_URL"].rstrip("/")+"/rest/v1/daily_reports?select=*&order=report_date.desc&limit=1"
-    r=requests.get(url,headers=_headers(),timeout=10); r.raise_for_status(); rows=r.json(); return rows[0] if rows else None
+    r=requests.get(url,headers=_headers(),timeout=6); r.raise_for_status(); rows=r.json(); return rows[0] if rows else None
 
 def send_feishu(day, status, items):
     webhook=os.getenv("FEISHU_WEBHOOK_URL")

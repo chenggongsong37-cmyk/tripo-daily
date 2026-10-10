@@ -32,7 +32,10 @@ def make_report(day=None):
         text = summary_text(item)
         if any("\u4e00" <= c <= "\u9fff" for c in text): translate_to_english(text)
         else: translate_to_chinese(text)
-    with ThreadPoolExecutor(max_workers=10) as pool:
+    # A priority-media day can contain 80+ entries. Translation is I/O-bound,
+    # so a wider pool keeps the serverless request comfortably below Vercel's
+    # execution limit while preserving every selected article.
+    with ThreadPoolExecutor(max_workers=32) as pool:
         list(pool.map(pretranslate, chosen))
     status={"configured":ok+len(failures),"ok":ok,"failed":len(failures),"candidates":len(candidates),"chosen":len(chosen)}
     md = render_report(day, start, end, chosen, status, failures, pending)

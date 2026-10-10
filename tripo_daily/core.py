@@ -128,7 +128,7 @@ def translate_to_chinese(text: str) -> str:
             response = requests.get(
                 "https://api.mymemory.translated.net/get",
                 params={"q": text, "langpair": "en|zh-CN"},
-                timeout=6,
+                timeout=3,
                 headers={"User-Agent": os.getenv("USER_AGENT", "tripo-daily/0.1")},
             )
             response.raise_for_status()
@@ -151,7 +151,7 @@ def translate_to_english(text: str) -> str:
             response = requests.get(
                 "https://api.mymemory.translated.net/get",
                 params={"q": text, "langpair": "zh-CN|en"},
-                timeout=6,
+                timeout=3,
                 headers={"User-Agent": os.getenv("USER_AGENT", "tripo-daily/0.1")},
             )
             response.raise_for_status()
