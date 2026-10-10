@@ -1,7 +1,13 @@
 from datetime import datetime, timezone
 from tripo_daily.core import *
 def test_window_boundary():
-    s,e=window_for("2026-01-02"); assert s==datetime(2026,1,2,2,30,tzinfo=timezone.utc); assert in_window(Item("x","https://x/a","s",published=s),s,e); assert not in_window(Item("x","https://x/b","s",published=e),s,e)
+    s,e=window_for("2026-01-02"); assert s==datetime(2026,1,1,2,30,tzinfo=timezone.utc); assert e==datetime(2026,1,2,2,30,tzinfo=timezone.utc); assert in_window(Item("x","https://x/a","s",published=s),s,e); assert not in_window(Item("x","https://x/b","s",published=e),s,e)
+
+def test_report_date_is_window_end_date():
+    s,e=window_for("2026-01-02")
+    report=render_report("2026-01-02",s,e,[],{"ok":0,"failed":0,"candidates":0})
+    assert report.startswith("# 2026年1月2日 星期五")
+    assert "覆盖窗口：2026-01-01 10:30 ～ 2026-01-02 10:30（北京时间）" in report
 def test_dedupe_and_missing_time():
     a=Item("Meshy launch", "https://x/a?utm_source=x", "s"); b=Item("Meshy launch!", "https://x/a", "s"); assert len(dedupe([a,b]))==1; assert classify(a).competitor=="Meshy"; assert a.confidence=="低"
 def test_injection_is_data():

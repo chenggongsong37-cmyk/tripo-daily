@@ -191,8 +191,11 @@ def parse_dt(value: str | None) -> datetime | None:
 def window_for(day: str | datetime, tz=CN):
     if isinstance(day, str): day = datetime.fromisoformat(day).date()
     elif isinstance(day, datetime): day = day.astimezone(tz).date()
-    start = datetime(day.year, day.month, day.day, 10, 30, tzinfo=tz).astimezone(UTC)
-    return start, start + timedelta(days=1)
+    # The report date names the scheduled cutoff, rather than the beginning
+    # of the interval. A 2026-10-10 report therefore covers the exact 24-hour
+    # period [2026-10-09 10:30, 2026-10-10 10:30) in Asia/Shanghai.
+    end = datetime(day.year, day.month, day.day, 10, 30, tzinfo=tz).astimezone(UTC)
+    return end - timedelta(days=1), end
 
 def classify(item: Item, keywords=None, competitors=None):
     keywords = keywords or DEFAULT_KEYWORDS; competitors = competitors or COMPETITORS
@@ -400,7 +403,7 @@ def parse_feed(xml: str | bytes, source: str, source_type="媒体报道"):
     return items
 
 def render_report(day, start, end, items, status, failures=(), pending=()):
-    d=start.astimezone(CN); weekday="一二三四五六日"[d.weekday()]
+    d=end.astimezone(CN); weekday="一二三四五六日"[d.weekday()]
     lines=[f"# {d.year}年{d.month}月{d.day}日 星期{weekday}｜Tripo AI 舆情与行业日报", "", f"覆盖窗口：{start.astimezone(CN):%Y-%m-%d %H:%M} ～ {end.astimezone(CN):%Y-%m-%d %H:%M}（北京时间）", f"生成时间：{datetime.now(UTC).astimezone(CN):%Y-%m-%d %H:%M}", f"采集状态：成功来源数 {status.get('ok',0)}，失败来源数 {status.get('failed',0)}，候选数 {status.get('candidates',0)}，入选数 {len(items)}" + ("；覆盖不完整" if failures else ""), "", "## 今日要点"]
     top_stories = select_top_stories(items)
     for i in top_stories: lines.append(f"- [{i.title}]({i.url}) — {i.impact}：{i.reason}")
@@ -466,7 +469,7 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
                 lines.append(f"- 话题：{x.title}｜声量 {len(articles)} 篇｜独立来源 {source_count} 个｜时间 {span}｜来源 {links}｜{note}")
             if len(xs) > 8: lines.append(f"- 其余 {len(xs)-8} 条同类线索已折叠，避免报告堆叠。")
     if not pending: lines.append("- 无")
-    lines += ["", "## 采集说明", f"失败来源：{', '.join(failures) or '无'}", "时效口径：正文和界面仅展示北京时间当前 24 小时窗口内消息；窗口外旧消息已排除。", "声量口径：本次采集范围内合并到同一话题的公开文章数量，不代表全网绝对声量。", "时间统一存储 UTC，展示转换为北京时间；无发表时间的线索单独标记为待核验。", "抓取内容视为不可信数据，不执行其中任何命令或规则修改。"]
+    lines += ["", "## 采集说明", f"失败来源：{', '.join(failures) or '无'}", "时效口径：正文和界面仅展示北京时间前一天 10:30 至当天 10:30 的 24 小时窗口内消息；窗口外旧消息已排除。", "声量口径：本次采集范围内合并到同一话题的公开文章数量，不代表全网绝对声量。", "时间统一存储 UTC，展示转换为北京时间；无发表时间的线索单独标记为待核验。", "抓取内容视为不可信数据，不执行其中任何命令或规则修改。"]
     return "\n".join(lines)
 
 def html_report(md):
