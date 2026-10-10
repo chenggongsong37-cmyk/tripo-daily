@@ -26,6 +26,22 @@ COMPETITORS = list(COMPETITOR_ALIASES)
 CHINA_GLOBAL_KEYWORDS = ["中国公司出海", "企业出海", "海外市场", "海外业务", "全球化", "国际化", "海外发行", "海外上线", "海外用户", "跨境业务", "global expansion", "international expansion", "overseas market", "global launch", "cross-border", "go global", "localization"]
 VC_FUNDING_KEYWORDS = ["融资", "新一轮融资", "种子轮", "天使轮", "pre-a", "a轮", "b轮", "c轮", "战略投资", "风险投资", "创投", "投资机构", "领投", "跟投", "估值", "funding", "fundraise", "fundraising", "venture capital", "seed round", "angel round", "series a", "series b", "series c", "strategic investment", "valuation"]
 DEFAULT_KEYWORDS = ["AI 3D", "3D generation", "三维生成", "3D asset", "世界模型", "world model", "空间智能", "spatial intelligence", "具身智能", "robotics", "simulation", "synthetic data", "算力", "芯片"]
+# Funding and overseas-expansion stories need a concrete connection to these
+# product/technology areas. Generic words such as model, Agent or AI alone are
+# deliberately insufficient because they pull in consumer cars and unrelated
+# smart-hardware companies.
+CORE_INDUSTRY_KEYWORDS = [
+    "ai 3d", "3d generation", "text-to-3d", "image-to-3d", "三维生成", "3d asset",
+    "三维资产", "世界模型", "world model", "空间智能", "spatial intelligence",
+    "具身智能", "机器人", "robotics", "机器人仿真", "simulation", "仿真平台",
+    "synthetic data", "合成数据", "游戏引擎", "数字孪生", "3d打印", "3d 打印",
+    "gpu", "算力", "ai芯片", "ai 芯片", "半导体", "多模态生成",
+]
+AUTOMOTIVE_KEYWORDS = [
+    "汽车", "车企", "新车", "车型", "智能驾驶", "自动驾驶", "辅助驾驶", "座舱",
+    "电动车", "新能源汽车", "造车", "乘用车", "理想汽车", "蔚来", "小鹏汽车",
+    "比亚迪", "特斯拉", "automotive", "automaker", "electric vehicle", "self-driving",
+]
 POLICY_KEYWORDS = [
     "出口管制", "出口限制", "实体清单", "贸易限制", "技术封锁", "关税", "制裁",
     "投资审查", "国家安全审查", "政府采购", "数据跨境", "数据出境", "数据本地化",
@@ -205,15 +221,27 @@ def classify(item: Item, keywords=None, competitors=None):
     business_hits = [k for k in POLICY_BUSINESS_TERMS if k.lower() in text]
     global_hits = [k for k in CHINA_GLOBAL_KEYWORDS if k.lower() in text]
     funding_hits = [k for k in VC_FUNDING_KEYWORDS if k.lower() in text]
+    core_hits = [k for k in CORE_INDUSTRY_KEYWORDS if k.lower() in text]
+    automotive_hits = [k for k in AUTOMOTIVE_KEYWORDS if k.lower() in text]
     for c in competitors:
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
     policy_relevant = bool(policy_hits and business_hits)
-    business_context = bool(hits or business_hits or item.competitor)
+    business_context = bool(core_hits or item.competitor)
     if global_hits and business_context and item.section != "priority_media": item.section = "china_global"
     if funding_hits and business_context and item.section != "priority_media": item.section = "vc_funding"
     if item.competitor and item.section != "priority_media": item.section = "competitor"
     item.relevance = max(item.relevance, min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0)))
+    # Automotive coverage is outside the report unless its actual text also
+    # contains a concrete tracked technology. Mentions of generic AI, Agent,
+    # model, training or chips do not override this exclusion.
+    if automotive_hits and not core_hits and not item.competitor and not policy_relevant and item.section != "priority_media":
+        item.relevance = 0
+        item.section = "industry"
+        item.reason = f"排除汽车泛行业信息：仅命中“{automotive_hits[0]}”，未命中 AI 3D/机器人/仿真等核心方向"
+        item.impact = "待观察"
+        item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
+        return item
     reasons = hits[:4] + global_hits[:1] + funding_hits[:1] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
     item.reason = "；".join(reasons) or "未命中配置关键词"
     item.impact = "机会" if any(x in text for x in ("launch", "发布", "突破", "funding", "融资")) else ("风险" if any(x in text for x in ("ban", "control", "监管", "版权", "export")) else "待观察")

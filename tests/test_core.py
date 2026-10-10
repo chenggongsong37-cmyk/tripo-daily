@@ -21,6 +21,14 @@ def test_china_global_and_vc_sections_require_business_context():
     assert funding.section == "vc_funding"
     assert generic.section == "industry" and generic.relevance == 0
 
+def test_automotive_funding_requires_core_industry_connection():
+    generic=classify(Item("智能汽车公司完成融资，将扩充 AI Agent 团队", "https://x/car", "s"))
+    relevant=classify(Item("自动驾驶仿真与合成数据平台完成 A 轮融资", "https://x/sim", "s"))
+    assert generic.relevance == 0
+    assert generic.section == "industry"
+    assert "排除汽车泛行业信息" in generic.reason
+    assert relevant.section == "vc_funding" and relevant.relevance > 0
+
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items
     s,e=window_for("2026-01-02")
