@@ -27,7 +27,16 @@ def test_automotive_funding_requires_core_industry_connection():
     assert generic.relevance == 0
     assert generic.section == "industry"
     assert "排除汽车泛行业信息" in generic.reason
-    assert relevant.section == "vc_funding" and relevant.relevance > 0
+    assert relevant.relevance == 0
+    assert relevant.section == "industry"
+
+def test_bmw_and_li_auto_are_excluded_but_priority_media_is_preserved():
+    bmw=classify(Item("宝马发布新一代 AI 智能座舱与世界模型", "https://x/bmw", "s"))
+    li=classify(Item("理想发布多模态 Agent 和汽车芯片", "https://x/li", "s"))
+    priority=classify(Item("BMW reveals new vehicle", "https://x/media", "Forbes", section="priority_media", relevance=1))
+    assert bmw.relevance == 0
+    assert li.relevance == 0
+    assert priority.section == "priority_media" and priority.relevance == 1
 
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items

@@ -40,7 +40,8 @@ CORE_INDUSTRY_KEYWORDS = [
 AUTOMOTIVE_KEYWORDS = [
     "汽车", "车企", "新车", "车型", "智能驾驶", "自动驾驶", "辅助驾驶", "座舱",
     "电动车", "新能源汽车", "造车", "乘用车", "理想汽车", "蔚来", "小鹏汽车",
-    "比亚迪", "特斯拉", "automotive", "automaker", "electric vehicle", "self-driving",
+    "比亚迪", "特斯拉", "宝马", "理想汽车", "理想", "蔚来", "小米汽车", "小米su7",
+    "automotive", "automaker", "electric vehicle", "self-driving",
 ]
 POLICY_KEYWORDS = [
     "出口管制", "出口限制", "实体清单", "贸易限制", "技术封锁", "关税", "制裁",
@@ -232,13 +233,15 @@ def classify(item: Item, keywords=None, competitors=None):
     if funding_hits and business_context and item.section != "priority_media": item.section = "vc_funding"
     if item.competitor and item.section != "priority_media": item.section = "competitor"
     item.relevance = max(item.relevance, min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0)))
-    # Automotive coverage is outside the report unless its actual text also
-    # contains a concrete tracked technology. Mentions of generic AI, Agent,
-    # model, training or chips do not override this exclusion.
-    if automotive_hits and not core_hits and not item.competitor and not policy_relevant and item.section != "priority_media":
+    # Automotive company/news coverage is outside the general Tripo report.
+    # Car articles often mention simulation, models, chips or AI Agents in a
+    # generic way; those words must not pull BMW, Li Auto and similar stories
+    # into the daily industry feed. Priority-media monitoring remains
+    # exhaustive by design and is handled separately.
+    if automotive_hits and not item.competitor and item.section != "priority_media":
         item.relevance = 0
         item.section = "industry"
-        item.reason = f"排除汽车泛行业信息：仅命中“{automotive_hits[0]}”，未命中 AI 3D/机器人/仿真等核心方向"
+        item.reason = f"排除汽车泛行业信息：命中“{automotive_hits[0]}”，不属于 Tripo AI 3D 关注范围"
         item.impact = "待观察"
         item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
         return item
