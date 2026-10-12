@@ -46,6 +46,14 @@ def test_industry_watchlist_is_monitored_without_competitor_section():
         assert item.competitor is None
         assert "行业监测" in item.reason
 
+def test_vehicle_brands_and_mixed_briefs_are_excluded():
+    for title in ("吉利银河战舰 700 发布", "阿维塔新车上市", "小米 SU7 订单增长"):
+        item=classify(Item(title, "https://x/vehicle", "媒体"))
+        assert item.relevance == 0
+    brief=classify(Item("早报｜iPhone 新品、汽车订单与 AI 行业动态", "https://x/brief", "媒体"))
+    assert brief.relevance == 0
+    assert "综合早报" in brief.reason
+
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items
     s,e=window_for("2026-01-02")

@@ -52,7 +52,9 @@ AUTOMOTIVE_KEYWORDS = [
     "汽车", "车企", "新车", "车型", "智能驾驶", "自动驾驶", "辅助驾驶", "座舱",
     "电动车", "新能源汽车", "造车", "乘用车", "理想汽车", "蔚来", "小鹏汽车",
     "比亚迪", "特斯拉", "宝马", "理想汽车", "理想", "蔚来", "小米汽车", "小米su7",
-    "automotive", "automaker", "electric vehicle", "self-driving",
+    "吉利", "银河战舰", "长城汽车", "长安汽车", "广汽", "上汽", "奇瑞", "问界", "阿维塔",
+    "极氪", "零跑", "小鹏", "岚图", "新能源越野", "越野车", "换电站", "汽车研究院",
+    "automotive", "automaker", "electric vehicle", "self-driving", "vehicle", "suv",
 ]
 POLICY_KEYWORDS = [
     "出口管制", "出口限制", "实体清单", "贸易限制", "技术封锁", "关税", "制裁",
@@ -236,9 +238,11 @@ def classify(item: Item, keywords=None, competitors=None):
     core_hits = [k for k in CORE_INDUSTRY_KEYWORDS if k.lower() in text]
     automotive_hits = [k for k in AUTOMOTIVE_KEYWORDS if k.lower() in text]
     watchlist_hits = [name for name, aliases in INDUSTRY_WATCHLIST_ALIASES.items() if any(alias.lower() in text for alias in aliases)]
+    digest_marker = any(marker in item.title.lower() for marker in ("早报", "早知道", "日报", "morning brief", "daily brief"))
     for c in competitors:
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
+    explicit_core_title = bool([k for k in CORE_INDUSTRY_KEYWORDS if k.lower() in item.title.lower()] or item.competitor or watchlist_hits)
     policy_relevant = bool(policy_hits and business_hits)
     business_context = bool(core_hits or item.competitor or watchlist_hits)
     if global_hits and business_context and item.section != "priority_media": item.section = "china_global"
@@ -250,6 +254,13 @@ def classify(item: Item, keywords=None, competitors=None):
     # generic way; those words must not pull BMW, Li Auto and similar stories
     # into the daily industry feed. Priority-media monitoring remains
     # exhaustive by design and is handled separately.
+    if digest_marker and not explicit_core_title and item.section != "priority_media":
+        item.relevance = 0
+        item.section = "industry"
+        item.reason = "排除综合早报：标题未明确聚焦 AI 3D、竞品或相关基础设施"
+        item.impact = "待观察"
+        item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
+        return item
     if automotive_hits and not item.competitor and item.section != "priority_media":
         item.relevance = 0
         item.section = "industry"
