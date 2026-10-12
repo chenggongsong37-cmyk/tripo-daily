@@ -23,6 +23,17 @@ COMPETITOR_ALIASES = {
     "阿里 Happy Horse": ("happy horse", "happyhorse"),
 }
 COMPETITORS = list(COMPETITOR_ALIASES)
+# Products worth monitoring as part of the broader AI 3D market. They improve
+# relevance and discovery but deliberately remain in the industry section,
+# rather than creating additional rows in the direct-competitor tracker.
+INDUSTRY_WATCHLIST_ALIASES = {
+    "Sloyd": ("sloyd",),
+    "Kaedim": ("kaedim",),
+    "Alpha3D": ("alpha3d", "alpha 3d"),
+    "3D AI Studio": ("3d ai studio", "3daistudio"),
+    "Masterpiece X / WorldEngen": ("masterpiece x", "masterpiece studio", "worldengen"),
+    "Luma AI / Genie": ("luma ai", "luma genie", "genie 3d"),
+}
 CHINA_GLOBAL_KEYWORDS = ["中国公司出海", "企业出海", "海外市场", "海外业务", "全球化", "国际化", "海外发行", "海外上线", "海外用户", "跨境业务", "global expansion", "international expansion", "overseas market", "global launch", "cross-border", "go global", "localization"]
 VC_FUNDING_KEYWORDS = ["融资", "新一轮融资", "种子轮", "天使轮", "pre-a", "a轮", "b轮", "c轮", "战略投资", "风险投资", "创投", "投资机构", "领投", "跟投", "估值", "funding", "fundraise", "fundraising", "venture capital", "seed round", "angel round", "series a", "series b", "series c", "strategic investment", "valuation"]
 DEFAULT_KEYWORDS = ["AI 3D", "3D generation", "三维生成", "3D asset", "世界模型", "world model", "空间智能", "spatial intelligence", "具身智能", "robotics", "simulation", "synthetic data", "算力", "芯片"]
@@ -224,15 +235,16 @@ def classify(item: Item, keywords=None, competitors=None):
     funding_hits = [k for k in VC_FUNDING_KEYWORDS if k.lower() in text]
     core_hits = [k for k in CORE_INDUSTRY_KEYWORDS if k.lower() in text]
     automotive_hits = [k for k in AUTOMOTIVE_KEYWORDS if k.lower() in text]
+    watchlist_hits = [name for name, aliases in INDUSTRY_WATCHLIST_ALIASES.items() if any(alias.lower() in text for alias in aliases)]
     for c in competitors:
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
     policy_relevant = bool(policy_hits and business_hits)
-    business_context = bool(core_hits or item.competitor)
+    business_context = bool(core_hits or item.competitor or watchlist_hits)
     if global_hits and business_context and item.section != "priority_media": item.section = "china_global"
     if funding_hits and business_context and item.section != "priority_media": item.section = "vc_funding"
     if item.competitor and item.section != "priority_media": item.section = "competitor"
-    item.relevance = max(item.relevance, min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0)))
+    item.relevance = max(item.relevance, min(1.0, .25 * len(set(hits)) + (.45 if item.competitor else 0) + (.45 if watchlist_hits else 0) + (.55 if policy_relevant else 0) + (.35 if global_hits and business_context else 0) + (.35 if funding_hits and business_context else 0)))
     # Automotive company/news coverage is outside the general Tripo report.
     # Car articles often mention simulation, models, chips or AI Agents in a
     # generic way; those words must not pull BMW, Li Auto and similar stories
@@ -245,7 +257,7 @@ def classify(item: Item, keywords=None, competitors=None):
         item.impact = "待观察"
         item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
         return item
-    reasons = hits[:4] + global_hits[:1] + funding_hits[:1] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
+    reasons = ([f"行业监测：{watchlist_hits[0]}"] if watchlist_hits else []) + hits[:4] + global_hits[:1] + funding_hits[:1] + ([f"政策影响链：{policy_hits[0]} → {business_hits[0]}"] if policy_relevant else [])
     item.reason = "；".join(reasons) or "未命中配置关键词"
     item.impact = "机会" if any(x in text for x in ("launch", "发布", "突破", "funding", "融资")) else ("风险" if any(x in text for x in ("ban", "control", "监管", "版权", "export")) else "待观察")
     item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")

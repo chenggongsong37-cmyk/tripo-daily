@@ -38,6 +38,14 @@ def test_bmw_and_li_auto_are_excluded_but_priority_media_is_preserved():
     assert li.relevance == 0
     assert priority.section == "priority_media" and priority.relevance == 1
 
+def test_industry_watchlist_is_monitored_without_competitor_section():
+    for name in ("Sloyd", "Kaedim", "Alpha3D", "3D AI Studio", "WorldEngen", "Luma Genie"):
+        item=classify(Item(f"{name} releases a new product update", f"https://x/{name}", "Media"))
+        assert item.relevance > 0
+        assert item.section == "industry"
+        assert item.competitor is None
+        assert "行业监测" in item.reason
+
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items
     s,e=window_for("2026-01-02")
