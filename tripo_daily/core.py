@@ -23,7 +23,12 @@ COMPETITOR_ALIASES = {
     "阿里 Happy Horse": ("happy horse", "happyhorse"),
 }
 COMPETITORS = list(COMPETITOR_ALIASES)
-SELF_KEYWORDS = ["tripo", "tripo ai", "tripo3d", "vast", "vast ai", "vast inc", "vastdata", "vast company", "tripo ai api", "tripo maker"]
+SELF_KEYWORDS = [
+    # VAST group and the brand/product hierarchy supplied by the user.
+    "tripo", "tripo ai", "tripo3d", "tripo studio", "tripo maker", "tripo ai api",
+    "tripo3d.ai", "studio.tripo3d.com", "三启万物", "vast ai", "vast inc", "vastdata", "vast company",
+    "project eden", "eden world model", "eden model", "h3.1", "p1.0", "jujubit", "juju bit",
+]
 # Products worth monitoring as part of the broader AI 3D market. They improve
 # relevance and discovery but deliberately remain in the industry section,
 # rather than creating additional rows in the direct-competitor tracker.
@@ -230,7 +235,8 @@ def window_for(day: str | datetime, tz=CN):
 
 def classify(item: Item, keywords=None, competitors=None):
     keywords = keywords or DEFAULT_KEYWORDS; competitors = competitors or COMPETITORS
-    text = f"{item.title} {item.summary} {item.content}".lower()
+    raw_text = f"{item.title} {item.summary} {item.content}"
+    text = raw_text.lower()
     hits = [k for k in keywords if k.lower() in text]
     policy_hits = [k for k in POLICY_KEYWORDS if k.lower() in text]
     business_hits = [k for k in POLICY_BUSINESS_TERMS if k.lower() in text]
@@ -244,6 +250,7 @@ def classify(item: Item, keywords=None, competitors=None):
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
     self_hits = [k for k in SELF_KEYWORDS if k.lower() in text]
+    if re.search(r"\bVAST\b", raw_text): self_hits.insert(0, "VAST")
     if self_hits and item.section != "priority_media":
         item.section = "self"
         item.relevance = max(item.relevance, .9)

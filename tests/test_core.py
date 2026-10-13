@@ -60,6 +60,23 @@ def test_self_news_has_own_section_and_does_not_become_competitor():
     assert item.competitor is None
     assert item.relevance >= .9
 
+def test_all_user_supplied_self_brands_are_detected():
+    for title in (
+        "VAST announces Project Eden world model",
+        "Tripo Studio adds H3.1 and P1.0",
+        "JuJuBit connects Tripo AI to 3D printing",
+        "New release at studio.tripo3d.com",
+    ):
+        item=classify(Item(title, "https://example.com/self", "Media"))
+        assert item.section == "self", title
+        assert item.relevance >= .9
+    chinese=classify(Item("三启万物发布世界模型研究演示", "https://example.com/vast", "Media"))
+    assert chinese.section == "self"
+
+def test_lowercase_vast_adjective_is_not_self_news():
+    item=classify(Item("A vast market for new digital tools", "https://example.com/generic", "Media"))
+    assert item.section != "self"
+
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items
     s,e=window_for("2026-01-02")
