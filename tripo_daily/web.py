@@ -1,4 +1,7 @@
-"""Local web UI for viewing and refreshing reports."""
+"""Local web UI for viewing and refreshing reports.
+
+UI release: self-monitoring section enabled.
+"""
 from __future__ import annotations
 import json
 from datetime import datetime
