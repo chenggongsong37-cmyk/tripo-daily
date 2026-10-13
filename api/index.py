@@ -12,12 +12,13 @@ from tripo_daily.storage import latest_report, save_report, send_feishu
 
 _latest_html = ""
 _latest_priority_html = ""
+_latest_self_html = ""
 _latest_day = None
 _latest_source_status = {"configured": 0, "ok": 0, "failed": 0}
 _latest_items = []
 
 def make_report(day=None):
-    global _latest_html, _latest_priority_html, _latest_day, _latest_source_status, _latest_items
+    global _latest_html, _latest_priority_html, _latest_self_html, _latest_day, _latest_source_status, _latest_items
     day = day or datetime.now(CN).date().isoformat()
     start, end = window_for(day)
     raw, failures, ok = collect(sources_config(DEFAULT_SOURCES))
@@ -39,17 +40,22 @@ def make_report(day=None):
         list(pool.map(pretranslate, chosen))
     status={"configured":ok+len(failures),"ok":ok,"failed":len(failures),"candidates":len(candidates),"chosen":len(chosen)}
     md = render_report(day, start, end, chosen, status, failures, pending)
-    marker = "## 重点关注媒体"
+    marker = "## 自身动态"
+    media_marker = "## 重点关注媒体"
     next_marker = "## 竞品动态追踪"
     before, rest = md.split(marker, 1)
+    self_body, rest_after_self = rest.split(media_marker, 1)
+    rest = media_marker + rest_after_self
     priority_body, after = rest.split(next_marker, 1)
     main_md = before + next_marker + after
     # The priority-media page is an exhaustive media monitor, so the general
     # daily highlights block would be redundant there. Keep only report
     # metadata plus the media section.
     priority_header = before.split("## 今日要点", 1)[0]
-    priority_md = priority_header + marker + priority_body
-    _latest_html, _latest_priority_html, _latest_day = html_report(main_md), html_report(priority_md), day
+    priority_md = priority_header + media_marker + priority_body
+    self_header = before.split("## 今日要点", 1)[0]
+    self_md = self_header + marker + self_body
+    _latest_html, _latest_priority_html, _latest_self_html, _latest_day = html_report(main_md), html_report(priority_md), html_report(self_md), day
     serialized=[{"title":i.title,"url":i.url,"source":i.source,"source_type":i.source_type,"published":i.published.isoformat() if i.published else None,"summary":i.summary,"content":i.content,"competitor":i.competitor,"section":i.section,"impact":i.impact,"reason":i.reason,"action":i.action,"confidence":i.confidence,"verified":i.verified,"paywall":i.paywall,"attribution":i.attribution,"related_articles":[{**a,"published":a.get("published").isoformat() if a.get("published") else None} for a in i.related_articles]} for i in chosen]
     save_report(day,md,_latest_html,status,serialized)
     return _latest_html, failures, len(candidates), len(chosen)
@@ -62,7 +68,7 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         global _latest_html
         path = self.path.split("?", 1)[0]
-        if path in ("/", "/priority"): return self.send_body(PAGE)
+        if path in ("/", "/priority", "/self"): return self.send_body(PAGE)
         if path == "/api/status":
             if not _latest_html:
                 try:
@@ -75,9 +81,9 @@ class handler(BaseHTTPRequestHandler):
                             restored.append(Item(**{k:v for k,v in data.items() if k in Item.__dataclass_fields__}))
                         globals()["_latest_items"]=restored
                         start,end=window_for(saved["report_date"]); status=saved.get("status",{}); full_md=render_report(saved["report_date"],start,end,restored,status)
-                        before,rest=full_md.split("## 重点关注媒体",1); priority_body,after=rest.split("## 竞品动态追踪",1)
+                        before,rest=full_md.split("## 自身动态",1); self_body,rest=rest.split("## 重点关注媒体",1); priority_body,after=rest.split("## 竞品动态追踪",1)
                         priority_header=before.split("## 今日要点",1)[0]
-                        globals()["_latest_html"]=html_report(before+"## 竞品动态追踪"+after); globals()["_latest_priority_html"]=html_report(priority_header+"## 重点关注媒体"+priority_body)
+                        globals()["_latest_html"]=html_report(before+"## 竞品动态追踪"+after); globals()["_latest_priority_html"]=html_report(priority_header+"## 重点关注媒体"+priority_body); globals()["_latest_self_html"]=html_report(priority_header+"## 自身动态"+self_body)
                 except Exception: saved=None
                 if saved: return self.send_body(json.dumps({"url":"/api/report","message":f"最新日报：{_latest_day}","sources":_latest_source_status},ensure_ascii=False),"application/json; charset=utf-8")
                 configured = len(sources_config(DEFAULT_SOURCES))
@@ -85,6 +91,7 @@ class handler(BaseHTTPRequestHandler):
             return self.send_body(json.dumps({"url":"/api/report","message":f"最新日报：{_latest_day}","sources":_latest_source_status}, ensure_ascii=False), "application/json; charset=utf-8")
         if path == "/api/report": return self.send_body(_latest_html or "暂无日报")
         if path == "/api/priority": return self.send_body(_latest_priority_html or "暂无重点媒体日报")
+        if path == "/api/self": return self.send_body(_latest_self_html or "暂无自身动态日报")
         if path == "/api/export.xlsx":
             if not _latest_html: return self.send_body("请先点击刷新日报，再导出 Excel", "text/plain; charset=utf-8", 409)
             body = export_xlsx(_latest_items, _latest_day)
