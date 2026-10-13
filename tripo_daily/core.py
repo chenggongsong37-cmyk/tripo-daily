@@ -23,6 +23,7 @@ COMPETITOR_ALIASES = {
     "阿里 Happy Horse": ("happy horse", "happyhorse"),
 }
 COMPETITORS = list(COMPETITOR_ALIASES)
+SELF_KEYWORDS = ["tripo", "tripo ai", "tripo3d", "vast", "vast ai", "vast inc", "vastdata", "vast company", "tripo ai api", "tripo maker"]
 # Products worth monitoring as part of the broader AI 3D market. They improve
 # relevance and discovery but deliberately remain in the industry section,
 # rather than creating additional rows in the direct-competitor tracker.
@@ -242,6 +243,14 @@ def classify(item: Item, keywords=None, competitors=None):
     for c in competitors:
         aliases = COMPETITOR_ALIASES.get(c, (c.lower(),))
         if any(alias.lower() in text for alias in aliases): item.competitor = c
+    self_hits = [k for k in SELF_KEYWORDS if k.lower() in text]
+    if self_hits and item.section != "priority_media":
+        item.section = "self"
+        item.relevance = max(item.relevance, .9)
+        item.reason = f"自身动态：{self_hits[0]}"
+        item.impact = "机会" if any(x in text for x in ("发布", "launch", "融资", "funding", "合作", "partnership")) else "待观察"
+        item.confidence = "低" if not item.published or not item.verified else ("高" if item.content else "中")
+        return item
     explicit_core_title = bool([k for k in CORE_INDUSTRY_KEYWORDS if k.lower() in item.title.lower()] or item.competitor or watchlist_hits)
     policy_relevant = bool(policy_hits and business_hits)
     business_context = bool(core_hits or item.competitor or watchlist_hits)
@@ -462,6 +471,11 @@ def render_report(day, start, end, items, status, failures=(), pending=()):
     top_stories = select_top_stories(items)
     for i in top_stories: lines.append(f"- [{i.title}]({i.url}) — {i.impact}：{i.reason}")
     if not top_stories: lines.append("- 本窗口暂无与 Tripo/VAST 有明确关联的可核验要点。")
+    lines += ["", "## 自身动态"]
+    self_items = [i for i in items if i.section == "self"]
+    if self_items:
+        for i in self_items: lines.extend(report_item_lines(i, "###", start, end))
+    else: lines.append("本窗口未发现可核验的 Tripo/VAST 自身相关新动态。")
     lines += ["", "## 重点关注媒体"]
     priority_items = [i for i in items if i.section == "priority_media"]
     if priority_items:

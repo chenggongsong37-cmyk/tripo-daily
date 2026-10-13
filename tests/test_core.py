@@ -54,6 +54,12 @@ def test_vehicle_brands_and_mixed_briefs_are_excluded():
     assert brief.relevance == 0
     assert "综合早报" in brief.reason
 
+def test_self_news_has_own_section_and_does_not_become_competitor():
+    item=classify(Item("Tripo AI launches a new 3D generation API", "https://x/tripo", "Media"))
+    assert item.section == "self"
+    assert item.competitor is None
+    assert item.relevance >= .9
+
 def test_priority_media_bypasses_keyword_filter_but_keeps_window():
     from tripo_daily.cli import select_items
     s,e=window_for("2026-01-02")
