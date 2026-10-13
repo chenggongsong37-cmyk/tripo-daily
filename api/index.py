@@ -5,6 +5,7 @@ from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlsplit
 from tripo_daily.web import PAGE
 from tripo_daily.cli import collect, sources_config, DEFAULT_SOURCES, select_items
 from tripo_daily.core import CN, Item, parse_dt, classify, dedupe, in_window, render_report, window_for, html_report, export_xlsx, summary_text, translate_to_chinese, translate_to_english, topic_has_window_article
@@ -16,6 +17,7 @@ _latest_self_html = ""
 _latest_day = None
 _latest_source_status = {"configured": 0, "ok": 0, "failed": 0}
 _latest_items = []
+_manual_social_items = []
 
 def make_report(day=None):
     global _latest_html, _latest_priority_html, _latest_self_html, _latest_day, _latest_source_status, _latest_items
@@ -24,7 +26,8 @@ def make_report(day=None):
     raw, failures, ok = collect(sources_config(DEFAULT_SOURCES))
     _latest_source_status = {"configured": ok + len(failures), "ok": ok, "failed": len(failures)}
     candidates = [classify(i) for i in raw]
-    chosen = select_items(candidates, start, end)
+    manual = [i for i in _manual_social_items if i.published is None or in_window(i, start, end)]
+    chosen = select_items(candidates + manual, start, end)
     _latest_items = chosen
     pending = dedupe([i for i in candidates if i.published is None and i.relevance > 0])
     # Translation calls are independent. Warm their caches concurrently so a
@@ -92,6 +95,8 @@ class handler(BaseHTTPRequestHandler):
         if path == "/api/report": return self.send_body(_latest_html or "暂无日报")
         if path == "/api/priority": return self.send_body(_latest_priority_html or "暂无重点媒体日报")
         if path == "/api/self": return self.send_body(_latest_self_html or "暂无自身动态日报")
+        if path == "/api/social":
+            return self.send_body(json.dumps({"items":[{"title":i.title,"url":i.url,"source":i.source,"published":i.published.isoformat() if i.published else None,"section":i.section,"verified":i.verified} for i in _manual_social_items]},ensure_ascii=False),"application/json; charset=utf-8")
         if path == "/api/export.xlsx":
             if not _latest_html: return self.send_body("请先点击刷新日报，再导出 Excel", "text/plain; charset=utf-8", 409)
             body = export_xlsx(_latest_items, _latest_day)
@@ -123,6 +128,22 @@ class handler(BaseHTTPRequestHandler):
                 return self.send_body(json.dumps({"ok":False,"stage":"feishu","error":str(exc)},ensure_ascii=False),"application/json; charset=utf-8",502)
         self.send_error(404)
     def do_POST(self):
+        global _manual_social_items
+        if self.path.split("?", 1)[0] == "/api/social/ingest":
+            try:
+                length=int(self.headers.get("Content-Length","0")); data=json.loads(self.rfile.read(length) or b"{}")
+                platform=str(data.get("platform","")).strip().lower(); title=str(data.get("title","")).strip(); url=str(data.get("url","")).strip(); summary=str(data.get("summary","")).strip(); published=parse_dt(data.get("published"))
+                if platform not in {"weibo","xiaohongshu"}: raise ValueError("platform must be weibo or xiaohongshu")
+                if not title or not url.startswith(("http://","https://")): raise ValueError("title and a public http(s) URL are required")
+                host=urlsplit(url).hostname or ""
+                allowed=(host=="weibo.com" or host.endswith(".weibo.com")) if platform=="weibo" else (host in {"xiaohongshu.com","www.xiaohongshu.com","xhslink.com"} or host.endswith(".xiaohongshu.com"))
+                if not allowed: raise ValueError("链接域名与所选平台不匹配")
+                source="微博（人工录入）" if platform=="weibo" else "小红书（人工录入）"
+                item=classify(Item(title,url,source,"社交媒体公开线索",published,summary,verified=bool(published)))
+                _manual_social_items=[i for i in _manual_social_items if i.canonical_url != item.canonical_url]; _manual_social_items.append(item)
+                return self.send_body(json.dumps({"ok":True,"section":item.section,"verified":item.verified,"message":"已录入；未填写发布时间的内容会进入待核验"},ensure_ascii=False),"application/json; charset=utf-8")
+            except Exception as exc:
+                return self.send_body(json.dumps({"ok":False,"error":str(exc)},ensure_ascii=False),"application/json; charset=utf-8",400)
         if self.path.split("?", 1)[0] != "/api/refresh": return self.send_error(404)
         try:
             _, failures, candidates, chosen = make_report()
